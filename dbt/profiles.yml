@@ -1,0 +1,14 @@
+expat_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../database/dwh.duckdb
+      schema: dev
+      threads: 1
+
+    prod:
+      type: duckdb
+      path: ../database/dwh.duckdb
+      schema: prod
+      threads: 4

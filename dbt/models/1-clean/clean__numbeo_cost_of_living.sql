@@ -1,0 +1,1 @@
+select * from {{ source("numbeo", "cost_of_living") }}

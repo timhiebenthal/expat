@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: numbeo
+    database: dwh
+    schema: raw_numbeo
+    tables:
+      - name: cost_of_living
+      - name: cost_of_living__data
