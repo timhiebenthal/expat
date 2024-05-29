@@ -33,7 +33,7 @@ def get_city_data(city):
             cells = row.find_all("td")
             if cells:
                 category = cells[0].text.strip()
-                cost = cells[1].text.strip()
+                cost = cells[1].text.strip().replace('\xa0', '')
                 table_data.append({"category": category, "cost": cost})
 
         logging.info(f"Extracted {len(table_data)} rows for City '{city}'")

@@ -4,11 +4,11 @@ expat_analytics:
     dev:
       type: duckdb
       path: ../database/dwh.duckdb
-      schema: dev
+      schema: analytics
       threads: 1
 
     prod:
       type: duckdb
       path: ../database/dwh.duckdb
-      schema: prod
+      schema: analytics
       threads: 4
