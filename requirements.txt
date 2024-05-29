@@ -9,3 +9,4 @@ shandy-sqlfmt[jinjafmt]==0.21.3
 yfinance==0.2.40
 streamlit==1.35.0
 pygwalker==0.4.8.7
+duckdb==0.10.3

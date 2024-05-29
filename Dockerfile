@@ -8,6 +8,7 @@ WORKDIR /app
 ADD . /app
 
 ENV DBT_PROFILES_DIR=/workspaces/expat/dbt/
+ENV DUCKDB_LOCATION=/workspaces/expat/database/dwh.duckdb
 
 # Install Node.js
 RUN apt-get update && apt-get install -y curl

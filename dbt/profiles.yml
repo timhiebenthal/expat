@@ -3,12 +3,12 @@ expat_analytics:
   outputs:
     dev:
       type: duckdb
-      path: /workspaces/expat/database/dwh.duckdb
-      schema: analytics
+      path: '{{ env_var("DUCKDB_LOCATION") }}'
+      schema: analytics_dev
       threads: 1
 
     prod:
       type: duckdb
-      path: /workspaces/expat/database/dwh.duckdb
+      path: '{{ env_var("DUCKDB_LOCATION") }}'
       schema: analytics
       threads: 4

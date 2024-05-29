@@ -1,6 +1,7 @@
 import dlt
+import os 
 
-DATABASE_LOCATION = "/workspaces/expat/database/dwh.duckdb"
+DATABASE_LOCATION = os.environ.get("DUCKDB_LOCATION")
 
 def define_dlt_pipeline(schema_name):
     return dlt.pipeline(
