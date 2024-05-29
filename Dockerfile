@@ -16,5 +16,9 @@ RUN apt-get install -y nodejs
 
 
 RUN pip install -r requirements.txt
-# Run app.py when the container launches
-# CMD ["python", "app.py"]
+
+# Expose port 8501 for Streamlit
+EXPOSE 8501
+
+# Run Streamlit app
+# CMD ["streamlit", "run", "your_streamlit_app.py"]
