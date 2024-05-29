@@ -1,5 +1,14 @@
 {
     "dbt.queryLimit": 500,
     "WizardForDbtCore(TM).profilesDir": "/workspaces/expat/dbt/",
-    "dbt.enableNewLineagePanel": true
+    "dbt.enableNewLineagePanel": true,
+    "dbt.dbtPythonPathOverride": "/usr/local/bin/python",
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "DuckDB",
+            "name": "dwh.duckdb",
+            "database": "${workspaceFolder:expat}/database/dwh.duckdb"
+        }
+    ]
 }

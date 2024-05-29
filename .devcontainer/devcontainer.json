@@ -16,9 +16,7 @@
 		"GitHub.copilot-chat",
 		"innoverio.vscode-dbt-power-user",
 		"bastienboutonnet.vscode-dbt",
-		"Fivetran.dbt-language-server",
-		"RandomFractalsInc.duckdb-sql-tools",
-		"mtxr.sqltools"
+		"Fivetran.dbt-language-server"
 	]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
