@@ -5,3 +5,5 @@ dlt==0.4.12
 harlequin==1.20.0
 dbt-core==1.8.1
 dbt-duckdb==1.8.0
+shandy-sqlfmt[jinjafmt]==0.21.3
+yfinance==0.2.40

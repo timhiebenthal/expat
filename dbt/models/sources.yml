@@ -7,3 +7,15 @@ sources:
     tables:
       - name: cost_of_living
       - name: cost_of_living__data
+
+  - name: forex
+    database: dwh
+    schema: raw_forex
+    tables:
+      - name: forex_daily
+
+  - name: cities
+    database: dwh
+    schema: raw_cities
+    tables:
+      - name: cities

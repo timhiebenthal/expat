@@ -16,7 +16,9 @@
 		"GitHub.copilot-chat",
 		"innoverio.vscode-dbt-power-user",
 		"bastienboutonnet.vscode-dbt",
-		"Fivetran.dbt-language-server"
+		"Fivetran.dbt-language-server",
+		"yassun7010.vscode-shandy-sqlfmt",
+		"ms-python.black-formatter"
 	]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

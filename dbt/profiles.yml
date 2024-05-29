@@ -3,12 +3,12 @@ expat_analytics:
   outputs:
     dev:
       type: duckdb
-      path: ../database/dwh.duckdb
+      path: /workspaces/expat/database/dwh.duckdb
       schema: analytics
       threads: 1
 
     prod:
       type: duckdb
-      path: ../database/dwh.duckdb
+      path: /workspaces/expat/database/dwh.duckdb
       schema: analytics
       threads: 4

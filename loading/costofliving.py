@@ -5,17 +5,15 @@ import re
 import dlt
 import logging
 import yaml
+import utils
 
 # configure timestamp for logging
 logging.basicConfig(
     format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO
 )
 
-pipeline = dlt.pipeline(
-    pipeline_name="dwh",
-    destination=dlt.destinations.duckdb(credentials="database/dwh.duckdb"),
-    dataset_name="raw_numbeo",
-)
+DESTINATION_SCHEMA="raw_numbeo"
+pipeline = utils.define_dlt_pipeline(DESTINATION_SCHEMA)
 
 
 def get_city_data(city):
@@ -54,8 +52,8 @@ def load_data(city):
     logging.info("Loading successful.\n")
 
 
-with open("loading/config.yml", "r") as f:
+with open("config.yml", "r") as f:
     config = yaml.safe_load(f)
 
 for city in config["cities"]:
-    load_data(city)
+    load_data(city["name"])

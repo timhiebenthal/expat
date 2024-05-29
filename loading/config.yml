@@ -1,10 +1,28 @@
 cities:
-  - Munich
-  - Berlin
-  - Madrid
-  - New York
-  - Milan
-  - Barcelona
-  - Los Angeles
-  - Chicago
-  - London
+  - name: Munich
+    country: Germany
+    currency: EUR
+  - name: Berlin
+    country: Germany
+    currency: EUR
+  - name: Madrid
+    country: Spain
+    currency: EUR
+  - name: New York
+    country: USA
+    currency: USD
+  - name: Milan
+    country: Italy
+    currency: EUR
+  - name: Barcelona
+    country: Spain
+    currency: EUR
+  - name: Los Angeles
+    country: USA
+    currency: USD
+  - name: Chicago
+    country: USA
+    currency: USD
+  - name: London
+    country: UK
+    currency: GBP
