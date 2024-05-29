@@ -15,6 +15,8 @@ logging.basicConfig(
 DESTINATION_SCHEMA="raw_numbeo"
 pipeline = utils.define_dlt_pipeline(DESTINATION_SCHEMA)
 
+logging.info(">>>>>>>>>>>>>>>>> Extracting cost of living data from numbeo.com\n")
+
 
 def get_city_data(city):
     url = f"https://www.numbeo.com/cost-of-living/in/{city}"

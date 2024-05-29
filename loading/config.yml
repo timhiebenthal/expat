@@ -26,3 +26,15 @@ cities:
   - name: London
     country: UK
     currency: GBP
+  - name: Bangkok
+    country: Thailand
+    currency: THB
+  - name: Kuala Lumpur
+    country: Malaysia
+    currency: MYR
+  - name: Singapore
+    country: Singapore
+    currency: SGD
+  - name: Valencia
+    country: Spain
+    currency: EUR

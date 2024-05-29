@@ -11,6 +11,9 @@ logging.basicConfig(
     format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO
 )
 
+logging.info(">>>>>>>>>>>>>>>>> Extracting forex data from Yahoo finance\n")
+
+
 DESTINATION_SCHEMA = "raw_forex"
 BASE_CURRENCY = "EUR"
 

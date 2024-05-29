@@ -18,7 +18,8 @@
 		"bastienboutonnet.vscode-dbt",
 		"Fivetran.dbt-language-server",
 		"yassun7010.vscode-shandy-sqlfmt",
-		"ms-python.black-formatter"
+		"ms-python.black-formatter",
+		"ms-vscode.makefile-tools"
 	]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
