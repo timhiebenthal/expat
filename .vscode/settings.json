@@ -1,0 +1,5 @@
+{
+    "dbt.queryLimit": 500,
+    "WizardForDbtCore(TM).profilesDir": "/workspaces/expat/dbt/",
+    "dbt.enableNewLineagePanel": true
+}
