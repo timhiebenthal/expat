@@ -1,9 +1,18 @@
 pandas==2.2.2
 beautifulsoup4==4.12.3
 requests==2.32.2
-dlt==0.4.12
+dlt==0.4.3
 harlequin==1.20.0
 dbt-core==1.8.1
 dbt-duckdb==1.8.0
 shandy-sqlfmt[jinjafmt]==0.21.3
 yfinance==0.2.40
+# llama-cpp-python==0.2.61
+# huggingface-hub==0.23.3
+langchain #==0.2.4
+torch #==2.3.1
+transformers #==4.41.2
+accelerate #==0.31.0
+langchain_community
+dotenv
+langchain_huggingface
