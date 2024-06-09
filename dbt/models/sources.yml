@@ -19,3 +19,11 @@ sources:
     schema: raw_cities
     tables:
       - name: cities
+  - name: earnings
+    database: raw_jobs
+    meta:
+      external_location: "/workspaces/expat/loading/{name}.json"
+      format: json
+    schema: raw_job_info
+    tables:
+      - name: job_info

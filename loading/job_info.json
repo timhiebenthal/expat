@@ -1,0 +1,106 @@
+[
+        {
+            "city":"Munich",
+            "country":"Germany",
+            "currency":"EUR",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":6500,
+            "net_to_gross_salary_ratio":0.65
+        },
+        {
+            "city":"Berlin",
+            "country":"Germany",
+            "currency":"EUR",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":6000,
+            "net_to_gross_salary_ratio":0.65
+        },
+        {
+            "city":"Madrid",
+            "country":"Spain",
+            "currency":"EUR",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":4500,
+            "net_to_gross_salary_ratio":0.7
+        },
+        {
+            "city":"New York",
+            "country":"United States",
+            "currency":"USD",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":10000,
+            "net_to_gross_salary_ratio":0.75
+        },
+        {
+            "city":"Milan",
+            "country":"Italy",
+            "currency":"EUR",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":5000,
+            "net_to_gross_salary_ratio":0.68
+        },
+        {
+            "city":"Barcelona",
+            "country":"Spain",
+            "currency":"EUR",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":4000,
+            "net_to_gross_salary_ratio":0.7
+        },
+        {
+            "city":"Los Angeles",
+            "country":"United States",
+            "currency":"USD",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":9000,
+            "net_to_gross_salary_ratio":0.75
+        },
+        {
+            "city":"Chicago",
+            "country":"United States",
+            "currency":"USD",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":8500,
+            "net_to_gross_salary_ratio":0.75
+        },
+        {
+            "city":"London",
+            "country":"United Kingdom",
+            "currency":"GBP",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":5000,
+            "net_to_gross_salary_ratio":0.72
+        },
+        {
+            "city":"Bangkok",
+            "country":"Thailand",
+            "currency":"THB",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":120000,
+            "net_to_gross_salary_ratio":0.8
+        },
+        {
+            "city":"Kuala Lumpur",
+            "country":"Malaysia",
+            "currency":"MYR",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":12000,
+            "net_to_gross_salary_ratio":0.75
+        },
+        {
+            "city":"Singapore",
+            "country":"Singapore",
+            "currency":"SGD",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":8000,
+            "net_to_gross_salary_ratio":0.78
+        },
+        {
+            "city":"Valencia",
+            "country":"Spain",
+            "currency":"EUR",
+            "job": "Senior Data Engineer with 8 years experience",
+            "avg_monthly_gross_salary":3500,
+            "net_to_gross_salary_ratio":0.7
+        }
+    ]

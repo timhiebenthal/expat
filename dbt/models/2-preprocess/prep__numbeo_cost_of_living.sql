@@ -5,12 +5,17 @@ with
             city.city_id,
             data.category,
             data.cost_original,
-            config.currency,
+            config.local_currency,
 
             round(
                 cast(
                     regexp_replace(
-                        regexp_replace(data.cost_original, '([\$€£¥₹₩])', '', 'g'),
+                        regexp_replace(
+                            regexp_replace(data.cost_original, '[^\d\.]', '', 'g'),  -- Remove all non-numeric characters except the decimal point
+                            '^0+',
+                            '',
+                            'g'  -- Remove leading zeros
+                        ),
                         ',',
                         '',
                         'g'
@@ -21,7 +26,7 @@ with
 
         from {{ ref("clean__numbeo_cost_of_living") }} as city
         left join {{ ref("clean__numbeo_cost_of_living_data") }} as data using (city_id)
-        left join {{ ref("clean__config_cities") }} as config using (city_name)
+        left join {{ ref("clean__job_earnings") }} as config using (city_name)
     ),
 
     map_categories as (

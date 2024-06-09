@@ -1,6 +1,6 @@
 with
     cities as (
-        select city_name, city_id, activity, cost_original, cost_value, currency
+        select city_name, city_id, activity, cost_original, cost_value, local_currency
         from {{ ref("prep__numbeo_cost_of_living") }} as cost
         where activity is not null  -- only take mapped activities
     ),
@@ -12,7 +12,7 @@ with
         from cities
         left join
             {{ ref("prep__avg_forex_rate") }} as forex
-            on cities.currency = forex.from_currency
+            on cities.local_currency = forex.from_currency
     )
 
 select *

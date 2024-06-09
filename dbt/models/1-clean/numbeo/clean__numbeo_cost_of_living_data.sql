@@ -4,3 +4,5 @@ select
     category,
     cost as cost_original
 from {{ source("numbeo", "cost_of_living__data") }}
+order by random()
+limit 100
