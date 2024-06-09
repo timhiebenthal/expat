@@ -1,0 +1,33 @@
+"category","activity","activity_type",activity_count
+"Price per Square Meter to Buy Apartment in City Centre","Buy Housing - 1sqm Apartment in City Centre","Buy Housing",1
+"Price per Square Meter to Buy Apartment Outside of Centre","Buy Housing - 1sqm Apartment Outside of City Centre","Buy Housing",1
+"Preschool (or Kindergarten), Full Day, Private, Monthly for 1 Child","Childcare - Monthly Kindergarten","Childcare",1
+"1 Pair of Jeans (Levis 501 Or Similar)","Clothing - Jeans","Clothing",1
+"1 Summer Dress in a Chain Store (Zara, H&M, ...)","Clothing - Summer Dress","Clothing",1
+"1 Pair of Nike Running Shoes (Mid-Range)","Clothing - Nike Running Shoes","Clothing",1
+"International Primary School, Yearly for 1 Child","Education - Yearly Primary School","Education",1
+"Banana (1kg)","Groceries - Banana","Groceries",1
+"Rice (white), (1kg)","Groceries - Rice","Groceries",1
+"Water (1.5 liter bottle)","Groceries - 1.5l Water","Groceries",20
+"Chicken Fillets (1kg)","Groceries - Chicken Filets","Groceries",5
+"Eggs (regular) (12)","Groceries - Eggs","Groceries",1
+"Tomato (1kg)","Groceries - Tomato","Groceries",2
+"Bottle of Wine (Mid-Range)","Groceries - Bottle of Wine","Groceries",2
+"Apartment (1 bedroom) in City Centre","Housing - 1 Bedroom Apartment","Housing",1
+"Apartment (3 bedrooms) Outside of Centre","Housing - 3 Bedrooms Apartment Outside Centre","Housing",1
+"Apartment (1 bedroom) Outside of Centre","Housing - 1 Bedroom Apartment Outside Centre","Housing",1
+"Apartment (3 bedrooms) in City Centre","Housing - 3 Bedrooms Apartment","Housing",1
+"Fitness Club, Monthly Fee for 1 Adult","Leisure - Monthly Fitness Club","Leisure",1
+"Cinema, International Release, 1 Seat","Leisure - Cinema Ticket","Leisure",1
+"Monthly Pass (Regular Price)","Mobility - Monthly Public Transport","Mobility",1
+"One-way Ticket (Local Transport)","Mobility - One Way Public Transport","Mobility",6
+"Taxi 1km (Normal Tariff)","Mobility - 1km Taxi","Mobility",4
+"Cappuccino (regular)","Restaurant - Cappuccino","Restaurant",4
+"Water (0.33 liter bottle)","Restaurant - 0.33 Water Bottle","Restaurant",4
+"Meal, Inexpensive Restaurant","Restaurant - Basic Meal","Restaurant",8
+"Meal for 2 People, Mid-range Restaurant, Three-course","Restaurant - Mid-range Meal for 2","Restaurant",2
+"Domestic Beer (0.5 liter draught)","Restaurant - 0.5 Beer Draught","Restaurant",20
+"Coke/Pepsi (0.33 liter bottle)","Restaurant - 0.33 Coke","Restaurant",6
+"Basic (Electricity, Heating, Cooling, Water, Garbage) for 85m2 Apartment","Utilities - Basic for 85m2 Apartment","Utilities",1
+"Internet (60 Mbps or More, Unlimited Data, Cable/ADSL)","Utilities - Internet 60Mbps","Utilities",1
+"Mobile Phone Monthly Plan with Calls and 10GB+ Data","Utilities - Mobile Phone Plan","Utilities",1
