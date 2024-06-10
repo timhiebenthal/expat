@@ -28,8 +28,10 @@ with
     ),
 
     pivot_values as (
-        pivot convert_currency on activity using sum(cost_eur) group by city_name
+        pivot convert_currency on category_slug
+        using sum(monthly_activity_cost_eur)
+        group by city_name
     )
 
 select *
-from convert_currency
+from pivot_values
