@@ -5,7 +5,7 @@ dbt_run:
 	cd dbt && dbt run
 
 load_data:
-	cd loading && python cities.py && python forex.py && python costofliving.py
+	python loading/cities.py && python loading/forex.py && python loading/costofliving.py
 
 streamlit:
 	streamlit run data_viz/app.py

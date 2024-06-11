@@ -5,17 +5,17 @@ import json
 import yfinance as yf
 import utils
 import datetime as dt
+from tqdm import tqdm
+
+
+DESTINATION_SCHEMA = "raw_forex"
+BASE_CURRENCY = "EUR"
+
 
 # configure timestamp for logging
 logging.basicConfig(
     format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO
 )
-
-logging.info(">>>>>>>>>>>>>>>>> Extracting forex data from Yahoo finance\n")
-
-
-DESTINATION_SCHEMA = "raw_forex"
-BASE_CURRENCY = "EUR"
 
 # create pipeline config from utils-package
 pipeline = utils.define_dlt_pipeline(DESTINATION_SCHEMA)
@@ -27,8 +27,8 @@ dt_yesterday = (dt.date.today() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def get_needed_currencies():
-    # Load currencies from job_info.yml
-    with open("job_info.json", "r") as file:
+    # Load currencies from job_info.json -- should be switched to DuckDB at some point
+    with open("raw_data/job_info.json", "r") as file:
         config = json.load(file)
 
     # Get all foreign currencies from the config file (except EUR)
@@ -53,15 +53,21 @@ def get_forex_data(base_currency, foreign_currency):
 
 
 def load_data():
-    for foreign_currency in get_needed_currencies():
-        data = get_forex_data(BASE_CURRENCY, foreign_currency)
+    data = []
+    for foreign_currency in tqdm(get_needed_currencies()):
+        data.append(get_forex_data(BASE_CURRENCY, foreign_currency))
         pipeline.run(
             data,
             table_name="forex_daily",
             write_disposition="merge",
             primary_key=["Date", "from_currency", "to_currency"],
         )
-        logging.info(f"Loading successful for {foreign_currency}.\n")
+    logging.info(f"Loading successful.\n {len(data):,d} currencies.")
 
 
-load_data()
+if __name__ == "__main__":
+    print("__________")
+    logging.info(f"Executing {__file__} ... \n")
+    logging.info("Retreiving forex data from yahoo finance.")
+
+    load_data()
