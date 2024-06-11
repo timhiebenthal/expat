@@ -20,7 +20,8 @@
 		"yassun7010.vscode-shandy-sqlfmt",
 		"ms-python.black-formatter",
 		"ms-vscode.makefile-tools",
-		"mhutchie.git-graph"
+		"mhutchie.git-graph",
+		"ms-toolsai.jupyter"
 	]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

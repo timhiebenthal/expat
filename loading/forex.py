@@ -1,7 +1,7 @@
 import pandas as pd
 import dlt
 import logging
-import yaml
+import json
 import yfinance as yf
 import utils
 import datetime as dt
@@ -21,28 +21,34 @@ BASE_CURRENCY = "EUR"
 pipeline = utils.define_dlt_pipeline(DESTINATION_SCHEMA)
 
 
-#get date from yesterday
+# get date from yesterday
 dt_365daysago = (dt.date.today() - dt.timedelta(days=365)).strftime("%Y-%m-%d")
 dt_yesterday = (dt.date.today() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def get_needed_currencies():
-    # Load currencies from config.yml
-    with open('config.yml', 'r') as file:
-        config = yaml.safe_load(file)
+    # Load currencies from job_info.yml
+    with open("job_info.json", "r") as file:
+        config = json.load(file)
 
     # Get all foreign currencies from the config file (except EUR)
-    foreign_currencies = set([city['currency'] for city in config['cities'] if city['currency'] != 'EUR'])
+    foreign_currencies = set(
+        [city["currency"] for city in config if city["currency"] != "EUR"]
+    )
     return foreign_currencies
 
 
 def get_forex_data(base_currency, foreign_currency):
     # get forex data from yahoo finance for last 365 days
-    forex_data = yf.download(f"{foreign_currency}{base_currency}=X", start=dt_365daysago, end=dt_yesterday)
+    forex_data = yf.download(
+        f"{foreign_currency}{base_currency}=X", start=dt_365daysago, end=dt_yesterday
+    )
     forex_data = forex_data.reset_index()
     forex_data["from_currency"] = foreign_currency
     forex_data["to_currency"] = base_currency
-    logging.info(f"Extracted {len(forex_data)} rows for {foreign_currency} into {base_currency}.")
+    logging.info(
+        f"Extracted {len(forex_data)} rows for {foreign_currency} into {base_currency}."
+    )
     return forex_data.to_dict(orient="records")
 
 

@@ -29,6 +29,7 @@ with
             mobility as expense_mobility,
             restaurant as expense_restaurant,
             utilities as expense_utilities,
+
         from {{ ref("entity__cost_of_living") }}
 
     ),
