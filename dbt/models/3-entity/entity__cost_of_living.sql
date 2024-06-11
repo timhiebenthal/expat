@@ -25,13 +25,7 @@ with
         left join
             {{ ref("prep__avg_forex_rate") }} as forex
             on cities.local_currency = forex.from_currency
-    ),
-
-    pivot_values as (
-        pivot convert_currency on category_slug
-        using sum(monthly_activity_cost_eur)
-        group by city_name
     )
 
 select *
-from pivot_values
+from convert_currency

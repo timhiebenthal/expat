@@ -12,6 +12,12 @@ with
 
     ),
 
+    pivot_expenses as (
+        pivot {{ ref("entity__cost_of_living") }} on category_slug
+        using sum(monthly_activity_cost_eur)
+        group by city_name
+    ),
+
     cost as (
 
         select
@@ -30,8 +36,7 @@ with
             restaurant as expense_restaurant,
             utilities as expense_utilities,
 
-        from {{ ref("entity__cost_of_living") }}
-
+        from pivot_expenses
     ),
 
     flatten as (select * from earnings left join cost using (city_name))

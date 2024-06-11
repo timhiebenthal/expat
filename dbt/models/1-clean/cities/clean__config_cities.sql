@@ -1,1 +1,1 @@
-select name as city_name from {{ source("cities", "cities") }}
+select value as city_name from {{ source("cities", "cities") }}
