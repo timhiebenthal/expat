@@ -6,6 +6,7 @@ with
             country_name,
             job_title,
             job_experience,
+            job_title_experience_short,
             avg_monthly_gross_salary_eur,
             avg_monthly_net_salary_eur
         from {{ ref("entity__job_earnings") }}

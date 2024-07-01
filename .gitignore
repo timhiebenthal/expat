@@ -2,3 +2,4 @@
 database/*
 .github/dependabot.yml
 .env
+logs/

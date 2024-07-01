@@ -102,5 +102,109 @@
             "job": "Senior Data Engineer with 8 years experience",
             "avg_monthly_gross_salary":3500,
             "net_to_gross_salary_ratio":0.7
-        }
+        },
+        {
+            "city": "Munich",
+            "country": "Germany",
+            "currency": "EUR",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 5800,
+            "net_to_gross_salary_ratio": 0.63
+          },
+          {
+            "city": "Berlin",
+            "country": "Germany", 
+            "currency": "EUR",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 5500,
+            "net_to_gross_salary_ratio": 0.63
+          },
+          {
+            "city": "Madrid",
+            "country": "Spain",
+            "currency": "EUR",
+            "job": "Performance Marketing Manager with 5 years experience", 
+            "avg_monthly_gross_salary": 4200,
+            "net_to_gross_salary_ratio": 0.68
+          },
+          {
+            "city": "New York",
+            "country": "USA",
+            "currency": "USD",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 8000,
+            "net_to_gross_salary_ratio": 0.72
+          },
+          {
+            "city": "Milan",
+            "country": "Italy",
+            "currency": "EUR",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 4500,
+            "net_to_gross_salary_ratio": 0.62
+          },
+          {
+            "city": "Barcelona",
+            "country": "Spain",
+            "currency": "EUR",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 3800,
+            "net_to_gross_salary_ratio": 0.68
+          },
+          {
+            "city": "Los Angeles",
+            "country": "USA",
+            "currency": "USD",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 7500,
+            "net_to_gross_salary_ratio": 0.72
+          },
+          {
+            "city": "Chicago",
+            "country": "USA",
+            "currency": "USD",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 7000,
+            "net_to_gross_salary_ratio": 0.72
+          },
+          {
+            "city": "London",
+            "country": "UK",
+            "currency": "GBP",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 4800,
+            "net_to_gross_salary_ratio": 0.67
+          },
+          {
+            "city": "Bangkok",
+            "country": "Thailand",
+            "currency": "THB",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 120000,
+            "net_to_gross_salary_ratio": 0.82
+          },
+          {
+            "city": "Kuala Lumpur",
+            "country": "Malaysia",
+            "currency": "MYR",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 15000,
+            "net_to_gross_salary_ratio": 0.8
+          },
+          {
+            "city": "Singapore",
+            "country": "Singapore",
+            "currency": "SGD",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 8000,
+            "net_to_gross_salary_ratio": 0.78
+          },
+          {
+            "city": "Valencia",
+            "country": "Spain",
+            "currency": "EUR",
+            "job": "Performance Marketing Manager with 5 years experience",
+            "avg_monthly_gross_salary": 3600,
+            "net_to_gross_salary_ratio": 0.68
+          }
     ]

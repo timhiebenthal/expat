@@ -15,8 +15,15 @@ RUN apt-get update && apt-get install -y curl
 RUN curl -sL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
 
+RUN apt-get update && apt-get install -y sudo
 
+# install python requirements
 RUN pip install -r requirements.txt
+
+# add dedicated user for vscode
+ARG USERNAME=vscode
+RUN groupadd --gid 1000 ${USERNAME} && \
+    useradd --uid 1000 --gid 1000 -m ${USERNAME}
 
 # Expose port 8501 for Streamlit
 EXPOSE 8501

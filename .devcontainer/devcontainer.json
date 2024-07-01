@@ -8,6 +8,10 @@
 		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
 		"dockerfile": "../Dockerfile"
 	},
+    "mounts": [
+    "source=/${env:HOME}/git_repos/expat,target=/workspace,type=bind,consistency=cached"
+    ],
+    "remoteUser": "vscode",
 	"extensions": [
 		"ms-python.python",
 		"ms-azuretools.vscode-docker",
