@@ -20,7 +20,10 @@
 		"yassun7010.vscode-shandy-sqlfmt",
 		"ms-python.black-formatter",
 		"ms-vscode.makefile-tools"
-	]
+	],
+    "runArgs": [
+        "--env-file", "${localWorkspaceFolder}/.env"
+    ]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

@@ -1,8 +1,0 @@
-# Ignore everything
-*
-
-# But not these files...
-!llm.py
-!model.py
-!.gitignore
-!README.md
