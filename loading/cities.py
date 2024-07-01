@@ -11,15 +11,20 @@ logging.basicConfig(
 
 pipeline = utils.define_dlt_pipeline("raw_cities")
 
-# Load currencies from config.yml
-with open('config.yml', 'r') as file:
-    logging.info(">>>>>>>>>>>>>>>>> Loading cities from config.yml\n")
-    config = yaml.safe_load(file)
 
-    pipeline.run(
-        data=config['cities'],
-        table_name="cities",
-        write_disposition="replace",
-        primary_key="name",
-    )
+if __name__ == "__main__":
+    print("__________")
+    logging.info(f"Executing {__file__} ... \n")
+    logging.info("Load cities data from config.yml to DuckDB")
 
+    # Load currencies from config.yml
+    with open("config.yml", "r") as file:
+        logging.info("Loading cities from config.yml\n")
+        config = yaml.safe_load(file)
+
+        # incremental syncing would be an overkill for these few rows
+        pipeline.run(
+            data=config["cities"], table_name="cities", write_disposition="replace"
+        )
+
+    logging.info(f"Loading successful for {len(config['cities']):,d} cities.\n")
