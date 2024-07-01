@@ -3,9 +3,11 @@ with
         select
             city_name,
             country_name,
-            split_part(job, ' with ', 1) as job_title,
+            split_part(jobtitle_and_experience, ' with ', 1) as job_title,
             try_cast(
-                regexp_extract(split_part(job, ' with ', 2), '(\d+)') as int
+                regexp_extract(
+                    split_part(jobtitle_and_experience, ' with ', 2), '(\d+)'
+                ) as int
             ) as job_experience,
             local_currency,
             avg_monthly_gross_salary,

@@ -20,10 +20,7 @@ sources:
     tables:
       - name: cities
   - name: earnings
-    database: raw_jobs
-    meta:
-      external_location: "/workspaces/expat/raw_data/{name}.json"
-      format: json
-    schema: raw_job_info
+    database: dwh
+    schema: raw_earnings
     tables:
       - name: job_info

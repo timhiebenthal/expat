@@ -8,7 +8,7 @@ load_data:
 	python loading/cities.py && python loading/forex.py && python loading/costofliving.py
 
 streamlit:
-	streamlit run data_viz/app.py
+	streamlit run data_viz/streamlit_app.py
 
 dev:
 	docker run -v ./.env:/app/.env myapp:latest
