@@ -56,8 +56,7 @@ if __name__ == "__main__":
     logging.info(f"Executing {__file__} ... \n")
     logging.info("Extracting cost of living data from numbeo.com")
 
-    with open("config.yml", "r") as f:
-        config = yaml.safe_load(f)
+    config = utils.load_config()
 
     data = []
 

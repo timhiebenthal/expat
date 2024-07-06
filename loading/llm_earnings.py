@@ -68,8 +68,7 @@ def retrieve_city_data(list_of_cities, fields_of_interest, job):
     return response
 
 
-with open("config.yml", "r") as f:
-    config = yaml.safe_load(f)
+config = utils.load_config()
 
 print((config["cities"]))
 
