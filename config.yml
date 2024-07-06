@@ -1,15 +1,19 @@
 cities:
-  - Munich
-  - Berlin
-  - Madrid
-  - New York
-  - Milan
-  - Barcelona
-  - Los Angeles
-  - Chicago
-  - London
-  - Bangkok
-  - Kuala Lumpur
-  - Singapore
-  - Valencia
-  - Mexico City
+- Munich
+- Berlin
+- Madrid
+- New York
+- Milan
+- Barcelona
+- Los Angeles
+- Chicago
+- London
+- Bangkok
+- Kuala Lumpur
+- Singapore
+- Valencia
+- Mexico City
+jobs:
+- Senior Data Engineer with 7 years of work experience
+- Software Engineer with 5 years of work experience
+- Performance Marketing Manager with 5 years of experience
