@@ -13,6 +13,7 @@ cities:
 - Singapore
 - Valencia
 - Mexico City
+- Rome
 jobs:
 - job_title: Senior Data Engineer
   years_experience: 7.0
@@ -24,3 +25,5 @@ jobs:
   years_experience: 10.0
 - job_title: Sales Rep
   years_experience: 4.0
+- job_title: Junior Product Manager
+  years_experience: 2.0
