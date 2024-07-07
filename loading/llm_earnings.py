@@ -14,8 +14,8 @@ logging.basicConfig(
 )
 
 DESTINATION_SCHEMA="raw_earnings"
-job = "Senior Data Engineer with 7 years of work experience"
 
+config = utils.load_config()
 fields_of_interest = [
     "city",
     "country",
@@ -59,7 +59,7 @@ def retrieve_city_data(list_of_cities, fields_of_interest, job):
 
     response = chain.invoke(
         {
-            "job": "Senior Data Engineer with 7 years of work experience",
+            "job": job,
         }
     )
 
@@ -68,17 +68,21 @@ def retrieve_city_data(list_of_cities, fields_of_interest, job):
     return response
 
 
-config = utils.load_config()
+def run_pipeline():
+    logging.info(f"Executing {__file__} ... \n")
+    for job in config["jobs"]:
+        logging.info(f"\nRetrieving LLM data for job: {job} ...")
+        data = retrieve_city_data(config["cities"], fields_of_interest, job)
 
-print((config["cities"]))
+        pipeline.run(
+            data,
+            table_name="job_info",
+            write_disposition="merge",
+            primary_key=["city", "jobtitle_and_experience"],
+        )
 
-data = retrieve_city_data(config["cities"], fields_of_interest, job)
+    logging.info(f"LLM data retrieval done.")
 
-pipeline.run(
-    data,
-    table_name="job_info",
-    write_disposition="merge",
-    primary_key=["city", "job"],
-)
 
-logging.info(f"LLM data retrieval done.")
+if __name__ == "__main__":
+    run_pipeline()

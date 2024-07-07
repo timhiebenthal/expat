@@ -12,8 +12,7 @@ logging.basicConfig(
 pipeline = utils.define_dlt_pipeline("raw_cities")
 
 
-if __name__ == "__main__":
-    print("__________")
+def run_pipeline():
     logging.info(f"Executing {__file__} ... \n")
     logging.info("Load cities data from config.yml to DuckDB")
 
@@ -25,3 +24,6 @@ if __name__ == "__main__":
     )
 
     logging.info(f"Loading successful for {len(config['cities']):,d} cities.\n")
+
+if __name__ == "__main__":
+    run_pipeline()

@@ -2,10 +2,12 @@ import pandas as pd
 import dlt
 import logging
 import json
+import os
 import yfinance as yf
 import utils
 import datetime as dt
 from tqdm import tqdm
+import duckdb
 
 
 DESTINATION_SCHEMA = "raw_forex"
@@ -27,15 +29,10 @@ dt_yesterday = (dt.date.today() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def get_needed_currencies():
-    # Load currencies from job_info.json -- should be switched to DuckDB at some point
-    with open("raw_data/job_info.json", "r") as file:
-        config = json.load(file)
+    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    df = dwh.sql("select distinct currency from dwh.raw_earnings.job_info where currency != 'EUR'").df()
 
-    # Get all foreign currencies from the config file (except EUR)
-    foreign_currencies = set(
-        [city["currency"] for city in config if city["currency"] != "EUR"]
-    )
-    return foreign_currencies
+    return df['currency'].unique()
 
 
 def get_forex_data(base_currency, foreign_currency):
@@ -52,7 +49,9 @@ def get_forex_data(base_currency, foreign_currency):
     return forex_data.to_dict(orient="records")
 
 
-def load_data():
+def run_pipeline():
+    logging.info(f"Executing {__file__} ... \n")
+    logging.info("Retreiving forex data from yahoo finance.")
     data = []
     for foreign_currency in tqdm(get_needed_currencies()):
         data.append(get_forex_data(BASE_CURRENCY, foreign_currency))
@@ -66,8 +65,4 @@ def load_data():
 
 
 if __name__ == "__main__":
-    print("__________")
-    logging.info(f"Executing {__file__} ... \n")
-    logging.info("Retreiving forex data from yahoo finance.")
-
-    load_data()
+    run_pipeline()

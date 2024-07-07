@@ -1,12 +1,15 @@
 with
+    currency_per_city as (
+        select distinct city_name, local_currency from {{ ref("clean__job_earnings") }}
+
+    ),
     flattening as (
         select
             city.city_name,
             city.city_id,
             data.category,
             data.cost_original,
-            config.local_currency,
-
+            currency.local_currency,
             round(
                 cast(
                     regexp_replace(
@@ -23,10 +26,9 @@ with
                 ),
                 2
             ) as cost_value
-
         from {{ ref("clean__numbeo_cost_of_living") }} as city
         left join {{ ref("clean__numbeo_cost_of_living_data") }} as data using (city_id)
-        left join {{ ref("clean__job_earnings") }} as config using (city_name)
+        left join currency_per_city as currency using (city_name)
     ),
 
     map_activities as (

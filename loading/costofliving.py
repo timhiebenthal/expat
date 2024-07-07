@@ -51,11 +51,10 @@ def load_data(data):
     logging.info(f"Loading successful for {len(data):,d} cities.\n")
 
 
-if __name__ == "__main__":
-    print("__________")
+def run_pipeline():
     logging.info(f"Executing {__file__} ... \n")
     logging.info("Extracting cost of living data from numbeo.com")
-
+    
     config = utils.load_config()
 
     data = []
@@ -65,3 +64,8 @@ if __name__ == "__main__":
         data.append(get_city_data(city_string))
 
     load_data(data)
+    logging.info("Finished loading cost of living data.")
+
+
+if __name__ == "__main__":
+    run_pipeline()
