@@ -13,7 +13,7 @@ logging.basicConfig(
     format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO
 )
 
-DESTINATION_SCHEMA="raw_earnings"
+DESTINATION_SCHEMA = "raw_earnings"
 
 config = utils.load_config()
 fields_of_interest = [
@@ -22,7 +22,7 @@ fields_of_interest = [
     "currency",
     "jobtitle_and_experience",
     "average_monthly_gross_salary",
-    "net_to_gross_salary_ratio"
+    "net_to_gross_salary_ratio",
 ]
 
 pipeline = utils.define_dlt_pipeline(DESTINATION_SCHEMA)
@@ -38,7 +38,9 @@ def retrieve_city_data(list_of_cities, fields_of_interest, job):
         max_retries=2,
     )
 
-    logging.info(f"Retrieving data from LLM model for {len(list_of_cities)} cities ... ")
+    logging.info(
+        f"Retrieving data from LLM model for {len(list_of_cities)} cities ... "
+    )
 
     prompt_input = f"""Return the specified information for the for the cities of {', '.join(list_of_cities)}.
         The answer should be purely a JSON Array where each city is it's own object with { ', '.join(fields_of_interest)} as keys.
@@ -51,9 +53,7 @@ def retrieve_city_data(list_of_cities, fields_of_interest, job):
     # print(response.content)
 
     parser = JsonOutputParser()
-    prompt = PromptTemplate(
-        template=prompt_input
-    )
+    prompt = PromptTemplate(template=prompt_input)
 
     chain = prompt | model | parser
 
@@ -72,7 +72,10 @@ def run_pipeline():
     logging.info(f"Executing {__file__} ... \n")
     for job in config["jobs"]:
         logging.info(f"\nRetrieving LLM data for job: {job} ...")
-        data = retrieve_city_data(config["cities"], fields_of_interest, job)
+        job_string = (
+            f'{job["job_title"]} with {job["years_experience"]} years of experience'
+        )
+        data = retrieve_city_data(config["cities"], fields_of_interest, job_string)
 
         pipeline.run(
             data,
