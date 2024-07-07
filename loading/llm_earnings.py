@@ -72,9 +72,7 @@ def run_pipeline():
     logging.info(f"Executing {__file__} ... \n")
     for job in config["jobs"]:
         logging.info(f"\nRetrieving LLM data for job: {job} ...")
-        job_string = (
-            f'{job["job_title"]} with {job["years_experience"]} years of experience'
-        )
+        job_string = f'{job["job_title"]} with {int(job["years_experience"])} years of experience'
         data = retrieve_city_data(config["cities"], fields_of_interest, job_string)
 
         pipeline.run(
