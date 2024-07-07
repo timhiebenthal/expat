@@ -13,16 +13,6 @@ st.set_page_config(page_title="Cost of Living Analysis", layout="wide")
 st.title("Cost of Living Analysis")
 
 
-# init DWH connection
-dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
-df = dwh.sql("select * from dwh.analytics.dataset__cost_earnings_comparison").df()
-dwh.close()
-
-city_list = df["city_name"].sort_values().unique().tolist()
-job_list = df["job_title_experience_short"].sort_values().unique().tolist()
-# x = st.slider("Select a value")
-# st.write(x, "squared is", x * x)
-
 location_mapping = {
     "Rent 1 Room in Center": "expense_1_roomappart_center",
     "Rent 1 Room Outside of Center": "expense_1_roomappart_outside",
@@ -30,26 +20,35 @@ location_mapping = {
     "Rent 3 Room Outside of Center": "expense_3_roomappart_outside",
 }
 
-main_tab, config_tab = st.tabs(["Home", "Config"])
+dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+df = dwh.sql("select * from dwh.analytics.dataset__cost_earnings_comparison").df()
+dwh.close()  # close connection to not block the database
 
+city_list = df["city_name"].sort_values().unique().tolist()
+job_list = df["job_title_experience_short"].sort_values().unique().tolist()
 
-# with st.popover("Configurations"):
-currency = st.sidebar.selectbox("Select currency:", ["EUR"])
-selected_job = st.sidebar.selectbox("Enter job title:", job_list)
-selected_cities = st.sidebar.multiselect(
-    "Select cities:", city_list, default=["Berlin", "Munich"]
-)
-selected_location = st.sidebar.selectbox(
-    "Select location preference:", list(location_mapping.keys())
-)
+with st.expander("Selections") as selection_expander:
+    currency = st.selectbox("Select currency:", ["EUR"])
+    selected_job = st.selectbox("Enter job title:", job_list)
+    selected_cities = st.multiselect(
+        "Select cities:", city_list, default=["Berlin", "Munich"]
+    )
+    selected_location = st.selectbox(
+        "Select location preference:", list(location_mapping.keys())
+    )
+
+# tabs
+main_tab, sandbox_tab = st.tabs(["Home", "Sandbox"])
+
 
 with main_tab:
+    # init DWH connection
+
     st.markdown(
         "*DISCLAIMER: The values are estimations and are solely for illustrative purposes.*"
     )
 
-    with st.container(border=True):
-
+    with st.container(border=True) as main_container:
         selected_df = df.query(
             "city_name.isin(@selected_cities) and job_title_experience_short == @selected_job",
             engine="python",
@@ -99,27 +98,44 @@ with main_tab:
             },
         )
 
+    with st.sidebar as config_sidebar:
+        st.markdown(
+            """
+            Add cities or Jobs to the configuration.  
+            Run the pipeline afterwards to apply changes.
+            """
+        )
 
-with config_tab:
-    st.text(
-        "Add cities or Jobs to the configuration file and update the pipeline afterwards to take changes into account."
-    )
-
-    with st.container(border=True):
         cities = utils.editable_df_component(config, "cities")
         jobs = utils.editable_df_component(config, "jobs")
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.button(
-        "Save Changes",
-        type="primary",
-        on_click=utils.save_config,
-        args=(cities, jobs),
-        help="Overwrites the configuration file with the current values.",
-    )
-    col2.button(
-        "Update Pipeline",
-        type="primary",
-        on_click=utils.run_pipeline,
-        help="Runs the data pipeline to take modifications into account.",
+        st.button(
+            "Save Changes",
+            type="primary",
+            on_click=utils.save_config,
+            args=(cities, jobs),
+            help="Overwrites the configuration file with the current values.",
+        )
+        st.button(
+            "Update Pipeline",
+            type="primary",
+            on_click=utils.run_pipeline,
+            help="Runs the data pipeline to take modifications into account.",
+        )
+
+
+with sandbox_tab:
+    # init DWH connection
+    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    cost_df = dwh.sql("select * from dwh.analytics.entity__cost_of_living").df()
+    dwh.close()  # close connection to not block the database
+
+    st.dataframe(
+        cost_df.pivot_table(
+            index=["category_slug", "activity"],
+            columns="city_name",
+            values="cost_eur",
+            aggfunc="mean",
+        )[selected_cities].round(2),
+        use_container_width=True,
     )

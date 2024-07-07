@@ -14,6 +14,8 @@ cities:
 - Valencia
 - Mexico City
 - Rome
+- Tokyo
+- Copenhagen
 jobs:
 - job_title: Senior Data Engineer
   years_experience: 7.0
@@ -21,9 +23,7 @@ jobs:
   years_experience: 5.0
 - job_title: Performance Marketing Manager
   years_experience: 5.0
+- job_title: Customer Success Manager
+  years_experience: 8.0
 - job_title: Data Scientist
-  years_experience: 10.0
-- job_title: Sales Rep
-  years_experience: 4.0
-- job_title: Junior Product Manager
-  years_experience: 2.0
+  years_experience: 5.0

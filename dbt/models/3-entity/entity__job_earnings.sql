@@ -1,6 +1,11 @@
 with
     convert_currency as (
         select
+            {{
+                dbt_utils.generate_surrogate_key(
+                    ["city_name", "job_title", "job_experience"]
+                )
+            }} as entity_id,
             earnings.*,
             (
                 earnings.avg_monthly_gross_salary
