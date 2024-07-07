@@ -14,8 +14,13 @@ cities:
 - Valencia
 - Mexico City
 jobs:
-- Senior Data Engineer with 7 years of work experience
-- Software Engineer with 5 years of work experience
-- Performance Marketing Manager with 5 years of experience
-- Data Scientist with 10 years of work experience
-- Sales Rep with 4 years of work experience
+- job_title: Senior Data Engineer
+  years_experience: 7.0
+- job_title: Software Engineer
+  years_experience: 5.0
+- job_title: Performance Marketing Manager
+  years_experience: 5.0
+- job_title: Data Scientist
+  years_experience: 10.0
+- job_title: Sales Rep
+  years_experience: 4.0

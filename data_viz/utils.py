@@ -54,23 +54,30 @@ def save_config(city_data, jobs_data):
 
     config = {
         "cities": city_data["cities"].dropna().tolist(),
-        "jobs": jobs_data["jobs"].dropna().tolist(),
+        "jobs": jobs_data.dropna().to_dict(orient="records"),
     }
 
     # saves the dataframe as a yaml file
     with open("config.yml", "w") as file:
         logging.info("Saving to config.yml\n")
-        yaml.dump(config, file)
+        yaml.dump(config, file, sort_keys=False)
 
 
 def editable_df_component(config, object_name):
     import pandas as pd
 
-    city_df = pd.DataFrame(data=config[object_name], columns=[object_name])
-    exp_cities = st.expander(object_name.title())
+    if object_name == "cities":
+        cols = ["cities"]
+    elif object_name == "jobs":
+        cols = ["job_title", "years_experience"]
+    else:
+        raise ValueError(f"Object name '{object_name}' not recognized.")
 
-    return exp_cities.data_editor(
-        data=city_df,
+    df = pd.DataFrame(data=config[object_name], columns=cols)
+    expander = st.expander(object_name.title())
+
+    return expander.data_editor(
+        data=df,
         num_rows="dynamic",
         hide_index=True,
         # height=750
