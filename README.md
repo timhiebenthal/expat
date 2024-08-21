@@ -12,8 +12,6 @@ This reflects also in the choice of tooling: the pipeline isn't meant to scale t
 
 - **loading**
     contains python scripts to retrieve data and - mostly - load it into DuckDB
-- **raw_data**
-    contains raw data loaded into DuckDB 
 - **database**
     contains the DuckDB database(s)
 - **dbt**
@@ -21,3 +19,10 @@ This reflects also in the choice of tooling: the pipeline isn't meant to scale t
 - **data_viz**
     contains various forms of data visualization and interaction
 <!-- - llm -->
+
+
+### Potential Features / To Do List:
+
+- integrate other cost of living beyond rent
+- allow for multi-select in jobs to simulate couple / group
+- let LLM find fitting cities for you
