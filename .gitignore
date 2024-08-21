@@ -1,5 +1,7 @@
 .venv
-database/*
 .github/dependabot.yml
 .env
-logs/
+logs/*
+loading/__pycache__/utils.cpython-311.pyc
+logs/dbt.log
+dbt/package-lock.yml
