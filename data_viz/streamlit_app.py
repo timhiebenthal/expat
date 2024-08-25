@@ -40,7 +40,7 @@ with st.sidebar as selection_sidebar:
     st.subheader("Define how many times these activities are done in a month:")
     
     selected_activities = []
-    for category in activity_df['activity_category'].unique():
+    for category in activity_df['activity_category'].sort_values().unique():
         with st.expander(category) as exp:
             activity_dict = activity_df.query("activity_category == @category")[['activity_name', 'activity_monthly_default_count']].to_dict(orient='records')
 
@@ -56,7 +56,7 @@ with st.sidebar as selection_sidebar:
     # st.json(activity_dict)
 
 # tabs
-main_tab, sandbox_tab = st.tabs(["Home", "Sandbox"])
+main_tab, config_tab, sandbox_tab = st.tabs(["Home", "Configuration", "Sandbox"])
 
 
 with main_tab:
@@ -96,7 +96,8 @@ with main_tab:
         selected_comparsion_df = earnings_agg.join(variable_cost_agg).join(rent_cost_agg).assign(
             rent_ratio=lambda x: x["monthly_rent_eur"] / x["total_monthly_net_salary_eur"],
             total_monthly_cost=lambda x: x["variable_living_cost_eur"] + x["monthly_rent_eur"],
-            spend_earnings_ratio=lambda x: x["total_monthly_cost"] / x["total_monthly_net_salary_eur"]
+            spend_earnings_ratio=lambda x: x["total_monthly_cost"] / x["total_monthly_net_salary_eur"],
+            total_absolute_savings=lambda x: x["total_monthly_net_salary_eur"] - x["total_monthly_cost"]
         ).reset_index()
 
 
@@ -106,9 +107,10 @@ with main_tab:
             "total_monthly_net_salary_eur",
             "monthly_rent_eur",
             "rent_ratio",
-            "total_monthly_cost",
             "variable_living_cost_eur",
-            "spend_earnings_ratio"
+            "total_monthly_cost",
+            "spend_earnings_ratio",
+            "total_absolute_savings"
         ]
 
         st.dataframe(
@@ -129,39 +131,44 @@ with main_tab:
                     "Total Monthly Cost", format="€ %.0f"
                 ),
                 "variable_living_cost_eur": st.column_config.NumberColumn(
-                    "Variable Living Cost", format="€ %.0f"
+                    "Additional Cost of Living", format="€ %.0f"
                 ),
                 "spend_earnings_ratio": st.column_config.ProgressColumn(
                     "Spend/Earnings Ratio", min_value=0, max_value=1, format=" %.02f"
                 ),
+                "total_absolute_savings": st.column_config.NumberColumn(
+                    "Total Absolute Savings", format="€ %.0f"
+                ),
             },
         )
 
-    # with st.sidebar as config_sidebar:
-    #     st.markdown(
-    #         """
-    #         Add cities or Jobs to the configuration.  
-    #         Run the pipeline afterwards to apply changes.
-    #         """
-    #     )
+with config_tab:
+    st.markdown(
+        """
+        Add cities or Jobs to the configuration.  
+        Run the pipeline afterwards to apply changes.
+        """
+    )
 
-    #     cities = utils.editable_df_component(config, "cities")
-    #     jobs = utils.editable_df_component(config, "jobs")
+    col1, col2 = st.columns(2)
+    with col1:
+        cities = utils.editable_df_component(config, "cities")
+    with col2:
+        jobs = utils.editable_df_component(config, "jobs")
 
-    #     st.button(
-    #         "Save Changes",
-    #         type="primary",
-    #         on_click=utils.save_config,
-    #         args=(cities, jobs),
-    #         help="Overwrites the configuration file with the current values.",
-    #     )
-    #     st.button(
-    #         "Update Pipeline",
-    #         type="primary",
-    #         on_click=utils.run_pipeline,
-    #         help="Runs the data pipeline to take modifications into account.",
-    #     )
-
+    st.button(
+        "Save Changes",
+        type="primary",
+        on_click=utils.save_config,
+        args=(cities, jobs),
+        help="Overwrites the configuration file with the current values.",
+    )
+    st.button(
+        "Update Pipeline",
+        type="primary",
+        on_click=utils.run_pipeline,
+        help="Runs the data pipeline to take modifications into account.",
+    )
 
 with sandbox_tab:
     # init DWH connection

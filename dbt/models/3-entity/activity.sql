@@ -13,7 +13,11 @@ with
         select
             *,
             case
-                when category_slug in ('restaurant', 'groceries') then true else false
+                when regexp_matches(activity_name, 'Housing|Education|Child')
+                then false
+                when category_slug in ('restaurant', 'groceries')
+                then true
+                else true
             end as is_dynamic_in_dashboard,
         from unique_activities
     )

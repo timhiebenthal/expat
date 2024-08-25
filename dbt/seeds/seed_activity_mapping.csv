@@ -8,7 +8,7 @@
 "International Primary School, Yearly for 1 Child","Education - Yearly Primary School","Education",1
 "Banana (1kg)","Groceries - Banana","Groceries",1
 "Rice (white), (1kg)","Groceries - Rice","Groceries",1
-"Water (1.5 liter bottle)","Groceries - 1.5l Water","Groceries",20
+"Water (1.5 liter bottle)","Groceries - 1.5l Water","Groceries",30
 "Chicken Fillets (1kg)","Groceries - Chicken Filets","Groceries",5
 "Eggs (regular) (12)","Groceries - Eggs","Groceries",1
 "Tomato (1kg)","Groceries - Tomato","Groceries",2
@@ -23,11 +23,11 @@
 "One-way Ticket (Local Transport)","Mobility - One Way Public Transport","Mobility",6
 "Taxi 1km (Normal Tariff)","Mobility - 1km Taxi","Mobility",4
 "Cappuccino (regular)","Restaurant - Cappuccino","Restaurant",4
-"Water (0.33 liter bottle)","Restaurant - 0.33 Water Bottle","Restaurant",4
-"Meal, Inexpensive Restaurant","Restaurant - Basic Meal","Restaurant",8
-"Meal for 2 People, Mid-range Restaurant, Three-course","Restaurant - Mid-range Meal for 2","Restaurant",2
+"Water (0.33 liter bottle)","Restaurant - 0.33 Water Bottle","Restaurant",8
+"Meal, Inexpensive Restaurant","Restaurant - Basic Meal","Restaurant",12
+"Meal for 2 People, Mid-range Restaurant, Three-course","Restaurant - Mid-range Meal for 2","Restaurant",4
 "Domestic Beer (0.5 liter draught)","Restaurant - 0.5 Beer Draught","Restaurant",20
-"Coke/Pepsi (0.33 liter bottle)","Restaurant - 0.33 Coke","Restaurant",6
+"Coke/Pepsi (0.33 liter bottle)","Restaurant - 0.33 Coke","Restaurant",8
 "Basic (Electricity, Heating, Cooling, Water, Garbage) for 85m2 Apartment","Utilities - Basic for 85m2 Apartment","Utilities",1
 "Internet (60 Mbps or More, Unlimited Data, Cable/ADSL)","Utilities - Internet 60Mbps","Utilities",1
 "Mobile Phone Monthly Plan with Calls and 10GB+ Data","Utilities - Mobile Phone Plan","Utilities",1
