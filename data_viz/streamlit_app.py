@@ -12,10 +12,10 @@ st.set_page_config(page_title="Cost of Living Analysis", layout="wide")
 st.title("Cost of Living Analysis")
 
 location_mapping = {
-    "Rent 1 Room in Center": "expense_1_roomappart_center",
-    "Rent 1 Room Outside of Center": "expense_1_roomappart_outside",
-    "Rent 3 Room in Center": "expense_3_roomappart_center",
-    "Rent 3 Room Outside of Center": "expense_3_roomappart_outside",
+    "Rent 1 Room in Center": "Housing - 1 Bedroom Apartment",
+    "Rent 1 Room Outside of Center": "Housing - 1 Bedroom Apartment Outside Centre",
+    "Rent 3 Room in Center": "Housing - 3 Bedrooms Apartment",
+    "Rent 3 Room Outside of Center": "Housing - 3 Bedrooms Apartment Outside Centre",
 }
 
 dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
@@ -76,7 +76,8 @@ with main_tab:
         variable_cost_agg = (variable_cost_df
                 .groupby("city_name")[["variable_living_cost_eur"]].sum()
         )
-        rent_cost_agg = (cost_of_living_df[cost_of_living_df['activity_name'] == selected_location]
+        rent_cost_agg = (cost_of_living_df[cost_of_living_df['activity_name'] == location_mapping[selected_location]]
+                .query("city_name.isin(@selected_cities)")
                 .groupby("city_name")[["cost_eur"]].sum()
                 .rename(columns={"cost_eur": "monthly_rent_eur"})
         )
@@ -84,28 +85,25 @@ with main_tab:
                 .query(
                     "city_name.isin(@selected_cities) and job_title_experience_short == @selected_job",
                     engine="python")
-                # sum up 'avg_monthly_net_salary_eur'  and also aggregate the strings of 'job_title_experience_short with " & " as delimiter
                 .groupby(["city_name"]).agg(
-                    avg_monthly_net_salary_eur=("avg_monthly_net_salary_eur", "sum"),
+                    total_monthly_net_salary_eur=("avg_monthly_net_salary_eur", "sum"),
                     jobs=("job_title_experience_short", lambda x: " & ".join(x))
                 )
                 .reset_index()
                 .set_index("city_name")
         )
-        st.dataframe(earnings_agg)
-        st.dataframe(rent_cost_agg)
-        st.dataframe(variable_cost_agg)
+
         selected_comparsion_df = earnings_agg.join(variable_cost_agg).join(rent_cost_agg).assign(
-            rent_ratio=lambda x: x["monthly_rent_eur"] / x["avg_monthly_net_salary_eur"],
+            rent_ratio=lambda x: x["monthly_rent_eur"] / x["total_monthly_net_salary_eur"],
             total_monthly_cost=lambda x: x["variable_living_cost_eur"] + x["monthly_rent_eur"],
-            spend_earnings_ratio=lambda x: x["total_monthly_cost"] / x["avg_monthly_net_salary_eur"]
-        )
+            spend_earnings_ratio=lambda x: x["total_monthly_cost"] / x["total_monthly_net_salary_eur"]
+        ).reset_index()
 
 
         columns = [
             "city_name",
             "jobs",
-            "avg_monthly_net_salary_eur",
+            "total_monthly_net_salary_eur",
             "monthly_rent_eur",
             "rent_ratio",
             "total_monthly_cost",
@@ -118,14 +116,14 @@ with main_tab:
             hide_index=True,
             use_container_width=True,
             column_config={
-                "avg_monthly_net_salary_eur": st.column_config.NumberColumn(
-                    "Avg. Net Salary (EUR)", format="€ %.0f"
+                "total_monthly_net_salary_eur": st.column_config.NumberColumn(
+                    "Household Net Salary (EUR)", format="€ %.0f"
                 ),
                 "monthly_rent_eur": st.column_config.NumberColumn(
                     selected_location, format="€ %.0f"
                 ),
                 "rent_ratio": st.column_config.ProgressColumn(
-                    "Rent Ratio", min_value=0, max_value=1, format=" %.02f%%"
+                    "Rent Ratio", min_value=0, max_value=1, format=" %.02f"
                 ),
                 "total_monthly_cost": st.column_config.NumberColumn(
                     "Total Monthly Cost", format="€ %.0f"
@@ -134,7 +132,7 @@ with main_tab:
                     "Variable Living Cost", format="€ %.0f"
                 ),
                 "spend_earnings_ratio": st.column_config.ProgressColumn(
-                    "Spend/Earnings Ratio", min_value=0, max_value=1, format=" %.02f%%"
+                    "Spend/Earnings Ratio", min_value=0, max_value=1, format=" %.02f"
                 ),
             },
         )
