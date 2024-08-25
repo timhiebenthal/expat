@@ -34,7 +34,7 @@ with
     map_activities as (
         select
             data.*,
-            mapping.activity,
+            mapping.activity as activity_name,
             mapping.activity_type,
             case
                 when data.category = 'Apartment (1 bedroom) in City Centre'

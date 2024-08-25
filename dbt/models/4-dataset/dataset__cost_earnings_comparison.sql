@@ -9,12 +9,12 @@ with
             job_title_experience_short,
             avg_monthly_gross_salary_eur,
             avg_monthly_net_salary_eur
-        from {{ ref("entity__job_earnings") }}
+        from {{ ref("job_earnings") }}
 
     ),
 
     pivot_expenses as (
-        pivot {{ ref("entity__cost_of_living") }} on category_slug
+        pivot {{ ref("cost_of_living") }} on category_slug
         using sum(monthly_activity_cost_eur)
         group by city_name
     ),
