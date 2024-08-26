@@ -63,7 +63,7 @@ def save_config(city_data, jobs_data):
         yaml.dump(config, file, sort_keys=False)
 
 
-def editable_df_component(config, object_name):
+def editable_df_component(config, object_name, expander=False):
     import pandas as pd
 
     if object_name == "cities":
@@ -74,15 +74,23 @@ def editable_df_component(config, object_name):
         raise ValueError(f"Object name '{object_name}' not recognized.")
 
     df = pd.DataFrame(data=config[object_name], columns=cols)
-    expander = st.expander(object_name.title())
+    
+    if expander == True:
+        expander = st.expander(object_name.title())
 
-    return expander.data_editor(
-        data=df,
-        num_rows="dynamic",
-        hide_index=True,
-        # height=750
-    )
-
+        return expander.data_editor(
+            data=df,
+            num_rows="dynamic",
+            hide_index=True,
+            # height=750
+        )
+    else:
+        return st.data_editor(
+                data=df,
+                num_rows="dynamic",
+                hide_index=True,
+                # height=750
+            )
 
 def run_pipeline():
     import subprocess
