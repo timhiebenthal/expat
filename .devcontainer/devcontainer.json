@@ -22,7 +22,8 @@
 		"ms-vscode.makefile-tools",
 		"mhutchie.git-graph",
 		"ms-toolsai.jupyter",
-		"mechatroner.rainbow-csv"
+		"mechatroner.rainbow-csv",
+		"janisdd.vscode-edit-csv"
 	],
     "runArgs": [
         "--env-file", "${localWorkspaceFolder}/.env"
