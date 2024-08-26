@@ -11,7 +11,7 @@ dbt_run:
 	cd dbt && dbt build --target prod && cd ..
 
 streamlit:
-	streamlit run data_viz/streamlit_app.py
+	streamlit run app/Home.py
 
 init: load_data dbt_init dbt_run streamlit
 

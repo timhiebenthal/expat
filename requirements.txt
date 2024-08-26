@@ -13,5 +13,5 @@ langchain #==0.2.4
 # accelerate
 python-dotenv
 langchain-anthropic
-streamlit==1.35.0
+streamlit==1.37.0
 duckdb==0.10.3
