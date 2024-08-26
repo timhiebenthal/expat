@@ -18,12 +18,25 @@ st.markdown(
     "Let's find the best city for you to live in! Please provide some information to tailor the results to your preferences."
 )
 
+
+def find_cities(form_dict):
+    print("TO DO: run form input through LLM and return 8 cities which are a good fit")
+    prompt_text = f"""
+    Please help me out finding a new city to live in.
+    I'm currently living in {form_dict['current_city']} and are looking for a new place to live in.
+    I really enjoyed visiting the cities {', '.join(form_dict['fav_cities'])}.
+    Other information which is important to me is: {form_dict['criteria']}
+
+    Please return an array of up to 8 cities which fit these descriptions.
+    """
+
+
 with st.form("inputs") as form_inputs:
     current_city = st.text_input(
         label="Where do you live currently?", placeholder="Berlin, Germany"
     )
     fav_cities = st.text_area(
-        label="Name up to 10 cities you really enjoyed being to.",
+        label="Name up to 5 cities you really enjoyed being to.",
         placeholder="London, New York, Barcelona...",
     )
 
@@ -38,7 +51,11 @@ with st.form("inputs") as form_inputs:
         "criteria": criteria,
     }
 
-    st.form_submit_button("Submit")
+    submitted = st.form_submit_button("Submit")
+
+    if submitted:
+        find_cities(form_data)
+
 
 if st.button("Compare"):
     st.switch_page("pages/Comparison.py")
