@@ -16,8 +16,8 @@ This reflects also in the choice of tooling: the pipeline isn't meant to scale t
     contains the DuckDB database(s)
 - **dbt**
     contains the dbt-project for data transformations
-- **data_viz**
-    contains various forms of data visualization and interaction
+- **app**
+    contains the streamlit app acting as the UI for the end user
 <!-- - llm -->
 
 
