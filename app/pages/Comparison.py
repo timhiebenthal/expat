@@ -18,9 +18,14 @@ location_mapping = {
     "Rent 3 Room Outside of Center": "Housing - 3 Bedrooms Apartment Outside Centre",
 }
 
+# getting data from DWH
 dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
-job_earnings_df = dwh.sql("select * from dwh.analytics.dataset__cost_earnings_comparison").df()
-activity_df = dwh.sql("select * from dwh.analytics.activity where is_dynamic_in_dashboard is true").df()
+job_earnings_df = dwh.sql(
+    "select * from dwh.analytics.dataset__cost_earnings_comparison"
+).df()
+activity_df = dwh.sql(
+    "select * from dwh.analytics.activity where is_dynamic_in_dashboard is true"
+).df()
 cost_of_living_df = dwh.sql("select * from dwh.analytics.cost_of_living").df()
 dwh.close()  # close connection to not block the database
 
@@ -29,35 +34,40 @@ job_list = job_earnings_df["job_title_experience_short"].sort_values().unique().
 
 with st.sidebar as selection_sidebar:
     currency = st.selectbox("Select currency:", ["EUR"])
-    selected_job = st.multiselect("Enter job title:", job_list, default=job_list[2], max_selections=2)
+    selected_job = st.multiselect(
+        "Enter job title:", job_list, default=job_list[2], max_selections=2
+    )
     selected_cities = st.multiselect(
-        "Select cities:", city_list, default=["Berlin", "Munich"], 
+        "Select cities:",
+        city_list,
+        default=["Berlin", "Munich"],
     )
     selected_location = st.selectbox(
         "Select location preference:", list(location_mapping.keys())
     )
 
     st.subheader("Define how many times these activities are done in a month:")
-    
+
     selected_activities = []
-    for category in activity_df['activity_category'].sort_values().unique():
+    for category in activity_df["activity_category"].sort_values().unique():
         with st.expander(category) as exp:
-            activity_dict = activity_df.query("activity_category == @category")[['activity_name', 'activity_monthly_default_count']].to_dict(orient='records')
+            activity_dict = activity_df.query("activity_category == @category")[
+                ["activity_name", "activity_monthly_default_count"]
+            ].to_dict(orient="records")
 
             for activity in activity_dict:
-                activity['selected_count'] = st.number_input(
-                    label=activity['activity_name'], 
-                    value=activity['activity_monthly_default_count'], 
+                activity["selected_count"] = st.number_input(
+                    label=activity["activity_name"],
+                    value=activity["activity_monthly_default_count"],
                     step=1,
                     min_value=0,
-                    max_value=50
-                    )
+                    max_value=50,
+                )
                 selected_activities.append(activity)
     # st.json(activity_dict)
 
-# tabs
-main_tab, config_tab, sandbox_tab = st.tabs(["Home", "Configuration", "Sandbox"])
-
+# define tabs
+main_tab, config_tab = st.tabs(["Home", "Configuration"])
 
 with main_tab:
     # init DWH connection
@@ -67,39 +77,55 @@ with main_tab:
     )
 
     with st.container(border=True) as main_container:
-        variable_cost_df = (cost_of_living_df
+        variable_cost_df = cost_of_living_df.query(
+            "city_name.isin(@selected_cities)"
+        ).merge(pd.DataFrame(selected_activities), on="activity_name", how="inner")
+        variable_cost_df["variable_living_cost_eur"] = (
+            variable_cost_df["cost_eur"] * variable_cost_df["selected_count"]
+        )
+
+        variable_cost_agg = variable_cost_df.groupby("city_name")[
+            ["variable_living_cost_eur"]
+        ].sum()
+        rent_cost_agg = (
+            cost_of_living_df[
+                cost_of_living_df["activity_name"]
+                == location_mapping[selected_location]
+            ]
             .query("city_name.isin(@selected_cities)")
-            .merge(pd.DataFrame(selected_activities), on='activity_name', how='inner')
+            .groupby("city_name")[["cost_eur"]]
+            .sum()
+            .rename(columns={"cost_eur": "monthly_rent_eur"})
+        )
+        earnings_agg = (
+            job_earnings_df.query(
+                "city_name.isin(@selected_cities) and job_title_experience_short == @selected_job",
+                engine="python",
             )
-        variable_cost_df['variable_living_cost_eur'] = variable_cost_df['cost_eur'] * variable_cost_df['selected_count']
-        
-        variable_cost_agg = (variable_cost_df
-                .groupby("city_name")[["variable_living_cost_eur"]].sum()
-        )
-        rent_cost_agg = (cost_of_living_df[cost_of_living_df['activity_name'] == location_mapping[selected_location]]
-                .query("city_name.isin(@selected_cities)")
-                .groupby("city_name")[["cost_eur"]].sum()
-                .rename(columns={"cost_eur": "monthly_rent_eur"})
-        )
-        earnings_agg = (job_earnings_df
-                .query(
-                    "city_name.isin(@selected_cities) and job_title_experience_short == @selected_job",
-                    engine="python")
-                .groupby(["city_name"]).agg(
-                    total_monthly_net_salary_eur=("avg_monthly_net_salary_eur", "sum"),
-                    jobs=("job_title_experience_short", lambda x: " & ".join(x))
-                )
-                .reset_index()
-                .set_index("city_name")
+            .groupby(["city_name"])
+            .agg(
+                total_monthly_net_salary_eur=("avg_monthly_net_salary_eur", "sum"),
+                jobs=("job_title_experience_short", lambda x: " & ".join(x)),
+            )
+            .reset_index()
+            .set_index("city_name")
         )
 
-        selected_comparsion_df = earnings_agg.join(variable_cost_agg).join(rent_cost_agg).assign(
-            rent_ratio=lambda x: x["monthly_rent_eur"] / x["total_monthly_net_salary_eur"],
-            total_monthly_cost=lambda x: x["variable_living_cost_eur"] + x["monthly_rent_eur"],
-            spend_earnings_ratio=lambda x: x["total_monthly_cost"] / x["total_monthly_net_salary_eur"],
-            total_absolute_savings=lambda x: x["total_monthly_net_salary_eur"] - x["total_monthly_cost"]
-        ).reset_index()
-
+        selected_comparsion_df = (
+            earnings_agg.join(variable_cost_agg)
+            .join(rent_cost_agg)
+            .assign(
+                rent_ratio=lambda x: x["monthly_rent_eur"]
+                / x["total_monthly_net_salary_eur"],
+                total_monthly_cost=lambda x: x["variable_living_cost_eur"]
+                + x["monthly_rent_eur"],
+                spend_earnings_ratio=lambda x: x["total_monthly_cost"]
+                / x["total_monthly_net_salary_eur"],
+                total_absolute_savings=lambda x: x["total_monthly_net_salary_eur"]
+                - x["total_monthly_cost"],
+            )
+            .reset_index()
+        )
 
         columns = [
             "city_name",
@@ -110,11 +136,13 @@ with main_tab:
             "variable_living_cost_eur",
             "total_monthly_cost",
             "spend_earnings_ratio",
-            "total_absolute_savings"
+            "total_absolute_savings",
         ]
 
         st.dataframe(
-            data=selected_comparsion_df[columns],  # .rename(columns=comparsion_df_column_mapping),
+            data=selected_comparsion_df[
+                columns
+            ],  # .rename(columns=comparsion_df_column_mapping),
             hide_index=True,
             use_container_width=True,
             column_config={
@@ -170,18 +198,5 @@ with config_tab:
         help="Runs the data pipeline to take modifications into account.",
     )
 
-with sandbox_tab:
-    # init DWH connection
-    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
-    cost_comparsion_df = dwh.sql("select * from dwh.analytics.cost_of_living").df()
-    dwh.close()  # close connection to not block the database
-
-    st.dataframe(
-        cost_comparsion_df.pivot_table(
-            index=["category_slug", "activity_name"],
-            columns="city_name",
-            values="cost_eur",
-            aggfunc="mean",
-        )[selected_cities].round(2),
-        use_container_width=True,
-    )
+if st.button("Back to Home"):
+    st.switch_page("Home.py")
