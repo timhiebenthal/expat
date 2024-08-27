@@ -96,22 +96,50 @@ with st.form("inputs") as form_inputs:
         placeholder="I want to live in a vibrant city with good public transportation and warm/hot weather.\nFeeling safe at night is also important to me.",
     )
 
+    st.markdown(
+        "Please provide some Job titles and years of experience which are relevant for this benchmark"
+    )
+    jobs_df = pd.DataFrame({"Job Title": ["Data Engineer"], "Years of Experience": [7]})
+    jobs = st.data_editor(
+        data=jobs_df,
+        num_rows="dynamic",
+        hide_index=True,
+    )
+
     form_data = {
         "current_city": current_city,
         "fav_cities": [x.strip() for x in fav_cities.split(",") if x],
         "criteria": criteria,
+        "jobs": jobs.rename(
+            columns={
+                "Job Title": "job_title",
+                "Years of Experience": "years_experience",
+            }
+        ).to_dict(orient="records"),
     }
 
-    submitted = st.form_submit_button("Submit")
+    submitted = st.form_submit_button("Find Cities")
 
     if submitted:
         # find_cities(form_data)
-        city_suggestions = retrieve_city_suggestions(form_data)
-        st.divider()
-        st.write(city_suggestions)
-        st.divider()
-        st.json(city_suggestions)
+        st.json(form_data)
+        # with st.status("Asking Claude for suggestions ...") as status:
+        #     city_suggestions = retrieve_city_suggestions(form_data)
+        #     st.divider()
+
+        # if city_suggestions:
+        #     st.text("Here are some cities you might enjoy living in:")
+        #     st.data_editor(
+        #         data=pd.DataFrame(city_suggestions),
+        #         num_rows="dynamic",
+        #         hide_index=True,
+        #         # height=750
+        #     )
+        #     st.text(
+        #         "Feel free to add cities on your own behalf or remove cities you are not interested in.\nOnly the 'name' column is required."
+        #     )
 
 
-if st.button("Compare"):
+if st.button("Submit Cities"):
+    # TO DO: save cities and jobs to config.yml and run pipeline
     st.switch_page("pages/Comparison.py")
