@@ -23,7 +23,8 @@
 		"mhutchie.git-graph",
 		"ms-toolsai.jupyter",
 		"mechatroner.rainbow-csv",
-		"janisdd.vscode-edit-csv"
+		"janisdd.vscode-edit-csv",
+		"pomdtr.excalidraw-editor"
 	],
     "runArgs": [
         "--env-file", "${localWorkspaceFolder}/.env"
