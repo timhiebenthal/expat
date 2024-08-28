@@ -27,4 +27,4 @@ sources:
     database: dwh
     schema: raw_earnings
     tables:
-      - name: job_info
+      - name: job_earnings

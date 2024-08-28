@@ -1,5 +1,13 @@
 import altair as alt
 import streamlit as st
+import logging
+
+# configure timestamp for logging
+logging.basicConfig(
+    format="%(asctime)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def create_altair_labelled_vertical_bar_chart(df, x_field, x_label, y_field, y_label):
@@ -25,15 +33,8 @@ def create_altair_labelled_vertical_bar_chart(df, x_field, x_label, y_field, y_l
 
 
 def load_config():
-    import logging
     import yaml
 
-    # configure timestamp for logging
-    logging.basicConfig(
-        format="%(asctime)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.INFO,
-    )
     # loads yaml-config and returns it as a dictionary
     with open("config.yml", "r") as file:
         logging.info("Loading cities from config.yml\n")
@@ -41,16 +42,8 @@ def load_config():
 
 
 def save_config(city_data, jobs_data):
-    import logging
     import yaml
     import time
-
-    # configure timestamp for logging
-    logging.basicConfig(
-        format="%(asctime)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.INFO,
-    )
 
     config = {
         "cities": city_data["cities"].dropna().tolist(),
@@ -61,6 +54,26 @@ def save_config(city_data, jobs_data):
     with open("config.yml", "w") as file:
         logging.info("Saving to config.yml\n")
         yaml.dump(config, file, sort_keys=False)
+
+
+def save_config_to_duckdb(city_df, jobs_df):
+    import os
+    import logging
+    import duckdb
+    import pandas as pd
+
+    jobs_df = jobs_df.rename(
+        columns={
+            "Job Title": "job_title",
+            "Years of Experience": "years_experience",
+        }
+    )
+    # upload tables to DuckDB
+    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    dwh.sql("CREATE SCHEMA IF NOT EXISTS raw_config")
+    dwh.sql("CREATE OR REPLACE TABLE raw_config.cities AS SELECT * FROM city_df")
+    dwh.sql("CREATE OR REPLACE TABLE raw_config.jobs AS SELECT * FROM jobs_df")
+    logging.info("Tables for jobs and cities uploaded to DuckDB\n")
 
 
 def editable_df_component(dict, object_name, expander=False):

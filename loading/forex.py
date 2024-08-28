@@ -30,9 +30,11 @@ dt_yesterday = (dt.date.today() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 def get_needed_currencies():
     dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
-    df = dwh.sql("select distinct currency from dwh.raw_earnings.job_info where currency != 'EUR'").df()
+    df = dwh.sql(
+        "select distinct currency from dwh.raw_earnings.job_earnings where currency != 'EUR'"
+    ).df()
 
-    return df['currency'].unique()
+    return df["currency"].unique()
 
 
 def get_forex_data(base_currency, foreign_currency):
