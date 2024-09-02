@@ -12,10 +12,22 @@ logging.basicConfig(
 
 
 def load_config():
-    # loads yaml-config and returns it as a dictionary
-    with open("config.yml", "r") as file:
-        logging.info("Loading cities from config.yml\n")
-        return yaml.safe_load(file)
+    """
+    Loads configuration from DuckDB
+    Returns:
+        type: dict
+    """
+    import duckdb
+    import os
+
+    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    cities = dwh.table("raw_config.cities").df()["name"].tolist()
+    jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+
+    return {
+        "cities": cities,
+        "jobs": jobs,
+    }
 
 
 def define_dlt_pipeline(schema_name):

@@ -25,7 +25,7 @@ def get_city_data(city):
     table = soup.find("table", class_="data_wide_table new_bar_table")
 
     if table is None:
-        raise ValueError(f"No data found for City '{city}'. Please check {url}")
+        return None
     else:
         # Extract the data from the table rows
         table_data = []
@@ -36,9 +36,7 @@ def get_city_data(city):
                 cost = cells[1].text.strip().replace("\xa0", "")
                 table_data.append({"category": category, "cost": cost})
 
-        # logging.info(f"Extracted info for City '{city}'")
-
-    return [{"city": city, "data": table_data}]
+        return [{"city": city, "data": table_data}]
 
 
 def load_data(data):
@@ -54,16 +52,28 @@ def load_data(data):
 def run_pipeline():
     logging.info(f"Executing {__file__} ... \n")
     logging.info("Extracting cost of living data from numbeo.com")
-    
+
     config = utils.load_config()
-
+    cities = config["cities"]
     data = []
-
-    for city in tqdm(config["cities"]):
+    failed_cities = []
+    logging.info(f"Retrieving data for {len(cities):,d} cities.")
+    for city in tqdm(cities):
         city_string = city.replace(" ", "-")
-        data.append(get_city_data(city_string))
+        city_data = get_city_data(city_string)
+        if city_data:
+            data.append(city_data)
+        else:
+            failed_cities.append(city_string)
+
+    if len(failed_cities) > 0:
+        for city in failed_cities:
+            logging.error(
+                f"ERROR! for '{city}'.Please check & correct this city: 'https://www.numbeo.com/cost-of-living/in/{city}'"
+            )
 
     load_data(data)
+
     logging.info("Finished loading cost of living data.")
 
 

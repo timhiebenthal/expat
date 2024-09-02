@@ -33,12 +33,22 @@ def create_altair_labelled_vertical_bar_chart(df, x_field, x_label, y_field, y_l
 
 
 def load_config():
-    import yaml
+    """
+    Loads configuration from DuckDB
+    Returns:
+        type: dict
+    """
+    import duckdb
+    import os
 
-    # loads yaml-config and returns it as a dictionary
-    with open("config.yml", "r") as file:
-        logging.info("Loading cities from config.yml\n")
-        return yaml.safe_load(file)
+    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    cities = dwh.table("raw_config.cities").df()["name"].tolist()
+    jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+
+    return {
+        "cities": cities,
+        "jobs": jobs,
+    }
 
 
 def save_config(city_data, jobs_data):
