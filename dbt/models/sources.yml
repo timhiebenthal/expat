@@ -16,7 +16,7 @@ sources:
     tables:
       - name: forex_daily
 
-  - name: cities
+  - name: config
     description: City data from config.yml
     database: dwh
     schema: raw_config

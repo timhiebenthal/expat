@@ -24,6 +24,16 @@ with
             avg_monthly_gross_salary,
             net_to_gross_salary_ratio
         from {{ ref("clean__job_earnings") }}
+    ),
+
+    filter_for_jobs_with_data as (
+
+        select clean_job.*
+        from clean_job
+        inner join
+            {{ ref("clean__config_jobs") }} as config
+            on clean_job.job_title = config.job_title
+            and clean_job.job_experience = config.job_experience
     )
 
-from clean_job
+from filter_for_jobs_with_data
