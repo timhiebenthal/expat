@@ -35,12 +35,13 @@ job_list = job_earnings_df["job_title_experience_short"].sort_values().unique().
 with st.sidebar as selection_sidebar:
     currency = st.selectbox("Select currency:", ["EUR"])
     selected_job = st.multiselect(
-        "Enter job title:", job_list, default=job_list[2], max_selections=2
+        "Enter job title:", job_list, default=job_list[0], max_selections=2
     )
     selected_cities = st.multiselect(
         "Select cities:",
         city_list,
-        default=["Berlin", "Munich"],
+        default=city_list,
+        # default=["Berlin", "Munich"],
     )
     selected_location = st.selectbox(
         "Select location preference:", list(location_mapping.keys())
@@ -73,7 +74,10 @@ with main_tab:
     # init DWH connection
 
     st.markdown(
-        "*DISCLAIMER: The values are estimations and are solely for illustrative purposes.*"
+        """*DISCLAIMER:   
+        The values are estimations and are solely for illustrative purposes.*  
+        Cities with missing data are excluded from the comparison in this version.
+        """
     )
 
     with st.container(border=True) as main_container:
@@ -125,6 +129,7 @@ with main_tab:
                 - x["total_monthly_cost"],
             )
             .reset_index()
+            .query("spend_earnings_ratio.notnull()", engine="python")
         )
 
         columns = [
@@ -146,6 +151,8 @@ with main_tab:
             hide_index=True,
             use_container_width=True,
             column_config={
+                "city_name": st.column_config.TextColumn("City"),
+                "jobs": st.column_config.TextColumn("Job"),
                 "total_monthly_net_salary_eur": st.column_config.NumberColumn(
                     "Household Net Salary (EUR)", format="€ %.0f"
                 ),
@@ -170,6 +177,23 @@ with main_tab:
             },
         )
 
+        highest_ratio_city = selected_comparsion_df[
+            selected_comparsion_df["spend_earnings_ratio"]
+            == selected_comparsion_df["spend_earnings_ratio"].min()
+        ].head(1)
+
+        highest_absolute_city = selected_comparsion_df[
+            selected_comparsion_df["total_absolute_savings"]
+            == selected_comparsion_df["total_absolute_savings"].max()
+        ].head(1)
+
+        st.divider()
+        st.markdown("### Results:")
+        st.markdown(
+            f"**{highest_ratio_city['city_name'].values[0]}** has the best Spend to Earnings Ratio of **{highest_ratio_city['spend_earnings_ratio'].values[0]:.0%}**.  \n"
+            + f"**{highest_absolute_city['city_name'].values[0]}** has the highest absolute savings of **{highest_absolute_city['total_absolute_savings'].values[0]:,.2f} €**."
+        )
+
 with config_tab:
     st.markdown(
         """
@@ -179,10 +203,11 @@ with config_tab:
     )
 
     col1, col2 = st.columns(2)
+
     with col1:
-        cities = utils.editable_df_component(config, "cities")
+        cities = utils.editable_df_component(dict=config, object_name="cities")
     with col2:
-        jobs = utils.editable_df_component(config, "jobs")
+        jobs = utils.editable_df_component(dict=config, object_name="jobs")
 
     st.button(
         "Save Changes",

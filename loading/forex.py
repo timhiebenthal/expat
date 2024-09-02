@@ -9,6 +9,7 @@ import datetime as dt
 from tqdm import tqdm
 import duckdb
 
+from forex_python.converter import CurrencyRates
 
 DESTINATION_SCHEMA = "raw_forex"
 BASE_CURRENCY = "EUR"
@@ -30,9 +31,11 @@ dt_yesterday = (dt.date.today() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 def get_needed_currencies():
     dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
-    df = dwh.sql("select distinct currency from dwh.raw_earnings.job_info where currency != 'EUR'").df()
+    df = dwh.sql(
+        "select distinct currency from dwh.raw_earnings.job_earnings where currency != 'EUR'"
+    ).df()
 
-    return df['currency'].unique()
+    return df["currency"].unique()
 
 
 def get_forex_data(base_currency, foreign_currency):
@@ -46,19 +49,26 @@ def get_forex_data(base_currency, foreign_currency):
     logging.info(
         f"Extracted {len(forex_data)} rows for {foreign_currency} into {base_currency}."
     )
-    return forex_data.to_dict(orient="records")
+    if len(forex_data) == 0:
+        return None
+    else:
+        return forex_data.to_dict(orient="records")
 
 
 def run_pipeline():
     logging.info(f"Executing {__file__} ... \n")
     logging.info("Retreiving forex data from yahoo finance.")
     data = []
+
     for foreign_currency in tqdm(get_needed_currencies()):
-        data.append(get_forex_data(BASE_CURRENCY, foreign_currency))
+        forex_data = get_forex_data(BASE_CURRENCY, foreign_currency)
+        if forex_data:
+            data.append(forex_data)
         pipeline.run(
             data,
             table_name="forex_daily",
-            write_disposition="merge",
+            write_disposition="replace",
+            # write_disposition="merge",
             primary_key=["Date", "from_currency", "to_currency"],
         )
     logging.info(f"Loading successful.\n {len(data):,d} currencies.")

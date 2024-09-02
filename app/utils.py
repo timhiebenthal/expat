@@ -1,5 +1,13 @@
 import altair as alt
 import streamlit as st
+import logging
+
+# configure timestamp for logging
+logging.basicConfig(
+    format="%(asctime)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def create_altair_labelled_vertical_bar_chart(df, x_field, x_label, y_field, y_label):
@@ -25,32 +33,27 @@ def create_altair_labelled_vertical_bar_chart(df, x_field, x_label, y_field, y_l
 
 
 def load_config():
-    import logging
-    import yaml
+    """
+    Loads configuration from DuckDB
+    Returns:
+        type: dict
+    """
+    import duckdb
+    import os
 
-    # configure timestamp for logging
-    logging.basicConfig(
-        format="%(asctime)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.INFO,
-    )
-    # loads yaml-config and returns it as a dictionary
-    with open("config.yml", "r") as file:
-        logging.info("Loading cities from config.yml\n")
-        return yaml.safe_load(file)
+    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    cities = dwh.table("raw_config.cities").df()["name"].tolist()
+    jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+
+    return {
+        "cities": cities,
+        "jobs": jobs,
+    }
 
 
 def save_config(city_data, jobs_data):
-    import logging
     import yaml
     import time
-
-    # configure timestamp for logging
-    logging.basicConfig(
-        format="%(asctime)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.INFO,
-    )
 
     config = {
         "cities": city_data["cities"].dropna().tolist(),
@@ -63,18 +66,40 @@ def save_config(city_data, jobs_data):
         yaml.dump(config, file, sort_keys=False)
 
 
-def editable_df_component(config, object_name, expander=False):
+def save_config_to_duckdb(city_df, jobs_df):
+    import os
+    import logging
+    import duckdb
+    import pandas as pd
+
+    jobs_df = jobs_df.rename(
+        columns={
+            "Job Title": "job_title",
+            "Years of Experience": "years_experience",
+        }
+    )
+    # upload tables to DuckDB
+    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    dwh.sql("CREATE SCHEMA IF NOT EXISTS raw_config")
+    dwh.sql("CREATE OR REPLACE TABLE raw_config.cities AS SELECT * FROM city_df")
+    dwh.sql("CREATE OR REPLACE TABLE raw_config.jobs AS SELECT * FROM jobs_df")
+    logging.info("Tables for jobs and cities uploaded to DuckDB\n")
+
+
+def editable_df_component(dict, object_name, expander=False):
     import pandas as pd
 
     if object_name == "cities":
         cols = ["cities"]
+    if object_name == "llm_cities":
+        cols = ["city", "country", "description"]
     elif object_name == "jobs":
         cols = ["job_title", "years_experience"]
-    else:
-        raise ValueError(f"Object name '{object_name}' not recognized.")
+    # else:
+    #     raise ValueError(f"Object name '{object_name}' not recognized.")
 
-    df = pd.DataFrame(data=config[object_name], columns=cols)
-    
+    df = pd.DataFrame(data=dict[object_name], columns=cols)
+
     if expander == True:
         expander = st.expander(object_name.title())
 
@@ -86,20 +111,21 @@ def editable_df_component(config, object_name, expander=False):
         )
     else:
         return st.data_editor(
-                data=df,
-                num_rows="dynamic",
-                hide_index=True,
-                # height=750
-            )
+            data=df,
+            num_rows="dynamic",
+            hide_index=True,
+            # height=750
+        )
+
 
 def run_pipeline():
     import subprocess
     import time
     from dbt.cli.main import dbtRunner, dbtRunnerResult
 
-    print("\n>>>> Run pipeline ...\n")
+    print("\n>>>> Running pipeline ...\n")
 
-    with st.status("Running pipeline ...", expanded=True) as status:
+    with st.status("Preparing your comparsion ...", expanded=True) as status:
         st.write("Retrieve earnings data from LLM model ...")
         subprocess.run(["python", "loading/llm_earnings.py"])
         time.sleep(1)

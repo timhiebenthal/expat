@@ -22,6 +22,7 @@ with
         left join
             {{ ref("prep__avg_forex_rate") }} as forex
             on earnings.local_currency = forex.from_currency
+        where forex.conversion_rate is not null or earnings.local_currency = 'EUR'  -- hardcoded base currency for now.
     )
 
 select *
