@@ -74,7 +74,10 @@ with main_tab:
     # init DWH connection
 
     st.markdown(
-        "*DISCLAIMER: The values are estimations and are solely for illustrative purposes.*"
+        """*DISCLAIMER:   
+        The values are estimations and are solely for illustrative purposes.*  
+        Cities with missing data are excluded from the comparison in this version.
+        """
     )
 
     with st.container(border=True) as main_container:
@@ -148,6 +151,8 @@ with main_tab:
             hide_index=True,
             use_container_width=True,
             column_config={
+                "city_name": st.column_config.TextColumn("City"),
+                "jobs": st.column_config.TextColumn("Job"),
                 "total_monthly_net_salary_eur": st.column_config.NumberColumn(
                     "Household Net Salary (EUR)", format="€ %.0f"
                 ),
