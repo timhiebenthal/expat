@@ -126,6 +126,7 @@ with main_tab:
                 - x["total_monthly_cost"],
             )
             .reset_index()
+            .query("spend_earnings_ratio.notnull()", engine="python")
         )
 
         columns = [
@@ -184,7 +185,7 @@ with main_tab:
         st.divider()
         st.markdown("### Results:")
         st.markdown(
-            f"**{highest_ratio_city['city_name'].values[0]}** has the best Spend to Earnings of **{highest_ratio_city['spend_earnings_ratio'].values[0]:.0%}**.  \n"
+            f"**{highest_ratio_city['city_name'].values[0]}** has the best Spend to Earnings Ratio of **{highest_ratio_city['spend_earnings_ratio'].values[0]:.0%}**.  \n"
             + f"**{highest_absolute_city['city_name'].values[0]}** has the highest absolute savings of **{highest_absolute_city['total_absolute_savings'].values[0]:,.2f} €**."
         )
 

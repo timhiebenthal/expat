@@ -67,7 +67,8 @@ def run_pipeline():
         pipeline.run(
             data,
             table_name="forex_daily",
-            write_disposition="merge",
+            write_disposition="replace",
+            # write_disposition="merge",
             primary_key=["Date", "from_currency", "to_currency"],
         )
     logging.info(f"Loading successful.\n {len(data):,d} currencies.")

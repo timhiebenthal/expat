@@ -43,7 +43,8 @@ def load_data(data):
     pipeline.run(
         data,
         table_name="cost_of_living",
-        write_disposition="merge",
+        write_disposition="replace",
+        # write_disposition="merge",
         primary_key="city",
     )
     logging.info(f"Loading successful for {len(data):,d} cities.\n")
