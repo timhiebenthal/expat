@@ -9,6 +9,7 @@ import datetime as dt
 from tqdm import tqdm
 import duckdb
 
+from forex_python.converter import CurrencyRates
 
 DESTINATION_SCHEMA = "raw_forex"
 BASE_CURRENCY = "EUR"
@@ -48,15 +49,21 @@ def get_forex_data(base_currency, foreign_currency):
     logging.info(
         f"Extracted {len(forex_data)} rows for {foreign_currency} into {base_currency}."
     )
-    return forex_data.to_dict(orient="records")
+    if len(forex_data) == 0:
+        return None
+    else:
+        return forex_data.to_dict(orient="records")
 
 
 def run_pipeline():
     logging.info(f"Executing {__file__} ... \n")
     logging.info("Retreiving forex data from yahoo finance.")
     data = []
+
     for foreign_currency in tqdm(get_needed_currencies()):
-        data.append(get_forex_data(BASE_CURRENCY, foreign_currency))
+        forex_data = get_forex_data(BASE_CURRENCY, foreign_currency)
+        if forex_data:
+            data.append(forex_data)
         pipeline.run(
             data,
             table_name="forex_daily",

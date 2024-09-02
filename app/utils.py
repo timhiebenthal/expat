@@ -95,8 +95,8 @@ def editable_df_component(dict, object_name, expander=False):
         cols = ["city", "country", "description"]
     elif object_name == "jobs":
         cols = ["job_title", "years_experience"]
-    else:
-        raise ValueError(f"Object name '{object_name}' not recognized.")
+    # else:
+    #     raise ValueError(f"Object name '{object_name}' not recognized.")
 
     df = pd.DataFrame(data=dict[object_name], columns=cols)
 
@@ -123,9 +123,9 @@ def run_pipeline():
     import time
     from dbt.cli.main import dbtRunner, dbtRunnerResult
 
-    print("\n>>>> Run pipeline ...\n")
+    print("\n>>>> Running pipeline ...\n")
 
-    with st.status("Running pipeline ...", expanded=True) as status:
+    with st.status("Preparing your comparsion ...", expanded=True) as status:
         st.write("Retrieve earnings data from LLM model ...")
         subprocess.run(["python", "loading/llm_earnings.py"])
         time.sleep(1)

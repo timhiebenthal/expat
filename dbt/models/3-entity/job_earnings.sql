@@ -19,7 +19,7 @@ with
                 '%s (%d years)', job_title, job_experience
             ) as job_title_experience_short,
         from {{ ref("prep__job_earnings") }} as earnings
-        left join
+        inner join
             {{ ref("prep__avg_forex_rate") }} as forex
             on earnings.local_currency = forex.from_currency
     )

@@ -141,4 +141,5 @@ if st.button("Submit Cities", disabled=st.session_state.city_suggestions is None
         st.error("Please find cities first before submitting.")
 
     # TO DO: save cities and jobs to config.yml and run pipeline
-    # st.switch_page("pages/Comparison.py")
+    utils.run_pipeline()
+    st.switch_page("pages/Comparison.py")
