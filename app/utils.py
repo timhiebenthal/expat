@@ -144,7 +144,10 @@ def run_pipeline():
 
         st.write("Run dbt pipeline ...")
         dbt = dbtRunner()
-        cli_args = [
+        deps_cli_args = [
+            "deps",
+        ]
+        run_cli_args = [
             "run",
             "--target",
             "prod",
@@ -153,12 +156,16 @@ def run_pipeline():
             "--project-dir",
             "./dbt",
         ]
-        dbtRunnerResult = dbt.invoke(cli_args)
 
-        if dbtRunnerResult.success:
-            print(">>>>>>>>>>>> dbt run successful.")
-        else:
-            st.error("dbt run failed! Please check the logs.")
+        dbtDepsResult = dbt.invoke(deps_cli_args)
+        if dbtDepsResult.success:
+            print(">>>>>>>>>>>> dbt deps installed.")
+            dbtRunnerResult = dbt.invoke(run_cli_args)
+
+            if dbtRunnerResult.success:
+                print(">>>>>>>>>>>> dbt run successful.")
+            else:
+                st.error("dbt run failed! Please check the logs.")
 
         status.update(label="Pipeline complete!", state="complete", expanded=False)
         success_info = st.success("Pipeline run successful! :)", icon="✅")
