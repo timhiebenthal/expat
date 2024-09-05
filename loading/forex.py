@@ -9,8 +9,6 @@ import datetime as dt
 from tqdm import tqdm
 import duckdb
 
-from forex_python.converter import CurrencyRates
-
 DESTINATION_SCHEMA = "raw_forex"
 BASE_CURRENCY = "EUR"
 

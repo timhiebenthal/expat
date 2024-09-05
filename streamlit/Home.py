@@ -119,13 +119,13 @@ with st.form("inputs") as form_inputs:
 
 if st.session_state.city_suggestions:
     st.text("Here are some cities you might enjoy living in:")
+    st.text(
+        "Feel free to add cities on your own behalf or remove cities you are not interested in.\nOnly the 'name' column is required."
+    )
     city_df_editable = st.data_editor(
         data=pd.DataFrame(st.session_state.city_suggestions),
         num_rows="dynamic",
         hide_index=True,
-    )
-    st.text(
-        "Feel free to add cities on your own behalf or remove cities you are not interested in.\nOnly the 'name' column is required."
     )
     st.session_state.city_suggestions = city_df_editable.to_dict("records")
 
