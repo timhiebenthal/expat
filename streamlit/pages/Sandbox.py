@@ -3,6 +3,9 @@ import duckdb
 import os
 import pandas as pd
 
+
+st.subheader("Just a page to test things")
+
 # init DWH connection
 dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
 cost_comparsion_df = dwh.sql("select * from dwh.analytics.cost_of_living").df()

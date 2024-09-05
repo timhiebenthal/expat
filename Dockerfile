@@ -1,23 +1,25 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11
-
-# Set the working directory in the container to /app
-WORKDIR /app
-
-# Add the current directory contents into the container at /app
-COPY . /app
+FROM python:3.11-slim
 
 # Set environment variables
 ENV DBT_PROFILES_DIR=/app/dbt/
 ENV DUCKDB_LOCATION=/app/database/dwh.duckdb
 
-# Install Node.js
+# Set the working directory
+WORKDIR /app
+
+# Install Node.js & git
 RUN apt-get update && apt-get install -y curl sudo
 RUN curl -sL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
+RUN apt-get install -y git
+RUN apt-get install -y build-essential
 
-# Install python requirements
+# Copy the requirements file and install dependencies
+COPY requirements.txt .
 RUN pip install -r requirements.txt
+
+# Copy the rest of the application code
+COPY . .
 
 # Add build argument for development mode
 ARG DEVELOPMENT_MODE=false

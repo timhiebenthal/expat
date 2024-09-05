@@ -1,6 +1,7 @@
 import altair as alt
 import streamlit as st
 import logging
+import os
 
 # configure timestamp for logging
 logging.basicConfig(
@@ -127,19 +128,15 @@ def run_pipeline():
 
     with st.status("Preparing your comparsion ...", expanded=True) as status:
         st.write("Retrieve earnings data from LLM model ...")
-        subprocess.run(["python", "loading/llm_earnings.py"])
-        time.sleep(1)
-
-        st.write("Load cities data from config.yml to DuckDB ...")
-        subprocess.run(["python", "loading/cities.py"])
+        subprocess.run(["python", "/app/loading/llm_earnings.py"])
         time.sleep(1)
 
         st.write("Retrieve cost of living data from numbeo.com ...")
-        subprocess.run(["python", "loading/costofliving.py"])
+        subprocess.run(["python", "/app/loading/costofliving.py"])
         time.sleep(1)
 
         st.write("Retrieve forex data from Yahoo finance ...")
-        subprocess.run(["python", "loading/forex.py"])
+        subprocess.run(["python", "/app/loading/forex.py"])
         time.sleep(1)
 
         st.write("Run dbt pipeline ...")
@@ -156,9 +153,9 @@ def run_pipeline():
             "--target",
             "prod",
             "--profiles-dir",
-            "./dbt",
+            "/app/dbt",
             "--project-dir",
-            "./dbt",
+            "/app/dbt",
         ]
 
         dbtDepsResult = dbt.invoke(deps_cli_args)

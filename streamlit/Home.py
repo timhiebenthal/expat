@@ -141,6 +141,18 @@ if st.button("Submit Cities", disabled=st.session_state.city_suggestions is None
     else:
         st.error("Please find cities first before submitting.")
 
+    ## debugging
+    import os
+
+    print("Current working directory:", os.getcwd())
+    print("Files in current working directory:", os.listdir())
+    # print("Files in /page directory:", os.listdir("pages"))
+
     # TO DO: save cities and jobs to config.yml and run pipeline
     utils.run_pipeline()
-    st.switch_page("pages/Comparison.py")
+
+    print("Current working directory:", os.getcwd())
+    print("Files in current working directory:", os.listdir())
+    # print("Files in /page directory:", os.listdir("pages"))
+
+    st.switch_page(f"/app/streamlit/pages/Comparison.py")

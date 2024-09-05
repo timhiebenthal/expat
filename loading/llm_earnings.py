@@ -78,8 +78,8 @@ def run_pipeline():
         pipeline.run(
             data,
             table_name="job_earnings",
-            write_disposition="replace",
-            # write_disposition="merge",
+            # write_disposition="replace",
+            write_disposition="merge",
             primary_key=["city", "jobtitle_and_experience"],
         )
 
