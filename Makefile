@@ -5,12 +5,12 @@ load_data:
 	python loading/llm_earnings.py && python loading/forex.py && python loading/costofliving.py
 
 dbt_init:
-	cd dbt && dbt deps && dbt seed && cd ..
+	dbt deps --profiles-dir ./dbt --project-dir ./dbt && dbt seed --profiles-dir ./dbt --project-dir ./dbt
 
 dbt_run:
-	cd dbt && dbt build --target prod && cd ..
+	dbt build --target prod --profiles-dir ./dbt --project-dir ./dbt
 
-streamlit:
+streamlit_app:
 	streamlit run streamlit/Home.py
 
 init: load_data dbt_init dbt_run streamlit
