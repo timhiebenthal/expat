@@ -6,10 +6,13 @@
 		// Sets the run context to one level up instead of the .devcontainer folder.
 		"context": "..",
 		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
-		"dockerfile": "../Dockerfile"
+		"dockerfile": "../Dockerfile",
+        "args": {
+            "DEVELOPMENT_MODE": "true"
+          }
 	},
 	"extensions": [
-		"ms-python.python",
+		"ms-python.python", 
 		"ms-azuretools.vscode-docker",
 		"ms-vscode-remote.remote-containers",
 		"GitHub.copilot",
