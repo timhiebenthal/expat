@@ -70,18 +70,22 @@ def retrieve_city_data(list_of_cities, fields_of_interest, job):
 
 def run_pipeline():
     logging.info(f"Executing {__file__} ... \n")
+
+    data = []
     for job in config["jobs"]:
         logging.info(f"\nRetrieving LLM data for job: {job} ...")
         job_string = f'{job["job_title"]} with {int(job["years_experience"])} years of experience'
-        data = retrieve_city_data(config["cities"], fields_of_interest, job_string)
-
-        pipeline.run(
-            data,
-            table_name="job_earnings",
-            write_disposition="replace",
-            # write_disposition="merge",
-            primary_key=["city", "jobtitle_and_experience"],
+        data.append(
+            retrieve_city_data(config["cities"], fields_of_interest, job_string)
         )
+
+    pipeline.run(
+        data,
+        table_name="job_earnings",
+        write_disposition="replace",
+        # write_disposition="merge",
+        primary_key=["city", "jobtitle_and_experience"],
+    )
 
     logging.info(f"LLM data retrieval done.")
 

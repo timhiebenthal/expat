@@ -10,12 +10,13 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 import pandas as pd
 import logging
+import time
 
 # configure timestamp for logging
 logging.basicConfig(
     format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO
 )
-config = utils.load_config()
+# config = utils.load_config()
 
 # home_page = st.Page("Home.py", icon="🌍")
 # comparison_page = st.Page("Comparison.py", icon="📈")
@@ -119,13 +120,13 @@ with st.form("inputs") as form_inputs:
 
 if st.session_state.city_suggestions:
     st.text("Here are some cities you might enjoy living in:")
+    st.text(
+        "Feel free to add/remove cities on your own behalf.\nOnly the 'name' column is required."
+    )
     city_df_editable = st.data_editor(
         data=pd.DataFrame(st.session_state.city_suggestions),
         num_rows="dynamic",
         hide_index=True,
-    )
-    st.text(
-        "Feel free to add cities on your own behalf or remove cities you are not interested in.\nOnly the 'name' column is required."
     )
     st.session_state.city_suggestions = city_df_editable.to_dict("records")
 
@@ -136,11 +137,17 @@ if st.button("Submit Cities", disabled=st.session_state.city_suggestions is None
             city_df=pd.DataFrame(st.session_state.city_suggestions),
             jobs_df=st.session_state.jobs_df,
         )
-        st.success("Data saved successfully!")
+        save_success = st.success(
+            "Data saved successfully!",
+        )  # TO DO: disable after a few seconds
+        time.sleep(1)
+        save_success.empty()
         # We don't reset city_suggestions here to allow for editing and resubmission
     else:
         st.error("Please find cities first before submitting.")
 
-    # TO DO: save cities and jobs to config.yml and run pipeline
-    utils.run_pipeline()
-    st.switch_page("pages/Comparison.py")
+    success = utils.run_pipeline()
+    if success:
+        st.switch_page(f"/app/streamlit/pages/Comparison.py")
+    else:
+        st.error("Something went wrong. Please check the logs for more information.")

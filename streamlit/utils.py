@@ -1,6 +1,7 @@
 import altair as alt
 import streamlit as st
 import logging
+import os
 
 # configure timestamp for logging
 logging.basicConfig(
@@ -127,40 +128,49 @@ def run_pipeline():
 
     with st.status("Preparing your comparsion ...", expanded=True) as status:
         st.write("Retrieve earnings data from LLM model ...")
-        subprocess.run(["python", "loading/llm_earnings.py"])
-        time.sleep(1)
-
-        st.write("Load cities data from config.yml to DuckDB ...")
-        subprocess.run(["python", "loading/cities.py"])
+        subprocess.run(["python", "/app/loading/llm_earnings.py"])
         time.sleep(1)
 
         st.write("Retrieve cost of living data from numbeo.com ...")
-        subprocess.run(["python", "loading/costofliving.py"])
+        subprocess.run(["python", "/app/loading/costofliving.py"])
         time.sleep(1)
 
         st.write("Retrieve forex data from Yahoo finance ...")
-        subprocess.run(["python", "loading/forex.py"])
+        subprocess.run(["python", "/app/loading/forex.py"])
         time.sleep(1)
 
         st.write("Run dbt pipeline ...")
         dbt = dbtRunner()
-        cli_args = [
-            "run",
-            "--target",
-            "prod",
+        deps_cli_args = [
+            "deps",
             "--profiles-dir",
             "./dbt",
             "--project-dir",
             "./dbt",
         ]
-        dbtRunnerResult = dbt.invoke(cli_args)
+        run_cli_args = [
+            "build",
+            "--target",
+            "prod",
+            "--profiles-dir",
+            "/app/dbt",
+            "--project-dir",
+            "/app/dbt",
+        ]
 
+        dbtDepsResult = dbt.invoke(deps_cli_args)
+        if dbtDepsResult.success:
+            print(">>>>>>>>>>>> dbt deps installed.")
+
+        dbtRunnerResult = dbt.invoke(run_cli_args)
         if dbtRunnerResult.success:
             print(">>>>>>>>>>>> dbt run successful.")
+
+            status.update(label="Pipeline complete!", state="complete", expanded=False)
+            success_info = st.success("Pipeline run successful! :)", icon="✅")
+            time.sleep(2)  # Wait for 2 seconds
+            success_info.empty()  # Clear the alert
+            return True
         else:
             st.error("dbt run failed! Please check the logs.")
-
-        status.update(label="Pipeline complete!", state="complete", expanded=False)
-        success_info = st.success("Pipeline run successful! :)", icon="✅")
-        time.sleep(2)  # Wait for 2 seconds
-        success_info.empty()  # Clear the alert
+            return False

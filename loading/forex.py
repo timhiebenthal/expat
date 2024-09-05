@@ -9,8 +9,6 @@ import datetime as dt
 from tqdm import tqdm
 import duckdb
 
-from forex_python.converter import CurrencyRates
-
 DESTINATION_SCHEMA = "raw_forex"
 BASE_CURRENCY = "EUR"
 
@@ -64,13 +62,27 @@ def run_pipeline():
         forex_data = get_forex_data(BASE_CURRENCY, foreign_currency)
         if forex_data:
             data.append(forex_data)
-        pipeline.run(
-            data,
-            table_name="forex_daily",
-            write_disposition="replace",
-            # write_disposition="merge",
-            primary_key=["Date", "from_currency", "to_currency"],
-        )
+
+    # add EUR conversion to make sure we always add somethines
+    data.append(
+        {
+            "date": "2024-01-01",
+            "open": 1.0,
+            "high": 1.0,
+            "low": 1.0,
+            "close": 1.0,
+            "from_currency": "EUR",
+            "to_currency": "EUR",
+        }
+    )
+
+    pipeline.run(
+        data,
+        table_name="forex_daily",
+        write_disposition="replace",
+        primary_key=["Date", "from_currency", "to_currency"],
+    )
+
     logging.info(f"Loading successful.\n {len(data):,d} currencies.")
 
 
