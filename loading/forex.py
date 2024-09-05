@@ -62,13 +62,14 @@ def run_pipeline():
         forex_data = get_forex_data(BASE_CURRENCY, foreign_currency)
         if forex_data:
             data.append(forex_data)
-        pipeline.run(
-            data,
-            table_name="forex_daily",
-            write_disposition="replace",
-            # write_disposition="merge",
-            primary_key=["Date", "from_currency", "to_currency"],
-        )
+
+    pipeline.run(
+        data,
+        table_name="forex_daily",
+        write_disposition="replace",
+        primary_key=["Date", "from_currency", "to_currency"],
+    )
+
     logging.info(f"Loading successful.\n {len(data):,d} currencies.")
 
 
