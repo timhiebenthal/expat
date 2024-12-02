@@ -149,7 +149,7 @@ def run_pipeline():
             "./dbt",
         ]
         run_cli_args = [
-            "run",
+            "build",
             "--target",
             "prod",
             "--profiles-dir",
@@ -163,13 +163,14 @@ def run_pipeline():
             print(">>>>>>>>>>>> dbt deps installed.")
 
         dbtRunnerResult = dbt.invoke(run_cli_args)
-
         if dbtRunnerResult.success:
             print(">>>>>>>>>>>> dbt run successful.")
+
+            status.update(label="Pipeline complete!", state="complete", expanded=False)
+            success_info = st.success("Pipeline run successful! :)", icon="✅")
+            time.sleep(2)  # Wait for 2 seconds
+            success_info.empty()  # Clear the alert
+            return True
         else:
             st.error("dbt run failed! Please check the logs.")
-
-        status.update(label="Pipeline complete!", state="complete", expanded=False)
-        success_info = st.success("Pipeline run successful! :)", icon="✅")
-        time.sleep(2)  # Wait for 2 seconds
-        success_info.empty()  # Clear the alert
+            return False

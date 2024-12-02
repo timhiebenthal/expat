@@ -63,6 +63,19 @@ def run_pipeline():
         if forex_data:
             data.append(forex_data)
 
+    # add EUR conversion to make sure we always add somethines
+    data.append(
+        {
+            "date": "2024-01-01",
+            "open": 1.0,
+            "high": 1.0,
+            "low": 1.0,
+            "close": 1.0,
+            "from_currency": "EUR",
+            "to_currency": "EUR",
+        }
+    )
+
     pipeline.run(
         data,
         table_name="forex_daily",
