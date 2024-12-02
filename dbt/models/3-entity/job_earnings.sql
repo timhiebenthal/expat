@@ -7,13 +7,15 @@ with
                 )
             }} as entity_id,
             earnings.*,
-            (
+            round(
                 earnings.avg_monthly_gross_salary
-                * coalesce(forex.conversion_rate, 1.00)
+                / coalesce(forex.conversion_rate, 1.00),
+                2
             ) as avg_monthly_gross_salary_eur,
-            (
+            round(
                 (earnings.avg_monthly_gross_salary * earnings.net_to_gross_salary_ratio)
-                * coalesce(forex.conversion_rate, 1.00)
+                / coalesce(forex.conversion_rate, 1.00),
+                2
             ) as avg_monthly_net_salary_eur,
             printf(
                 '%s (%d years)', job_title, job_experience

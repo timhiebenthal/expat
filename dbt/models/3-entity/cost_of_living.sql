@@ -17,9 +17,12 @@ with
     convert_currency as (
         select
             cities.*,
-            cities.cost_value * coalesce(forex.conversion_rate, 1.00) as cost_eur,
-            cities.monthly_activity_cost
-            * coalesce(forex.conversion_rate, 1.00) as monthly_activity_cost_eur,
+            round(
+                cities.cost_value / coalesce(forex.conversion_rate, 1.00), 2
+            ) as cost_eur,
+            round(
+                cities.monthly_activity_cost / coalesce(forex.conversion_rate, 1.00), 2
+            ) as monthly_activity_cost_eur,
             {{ slugify_column_values("activity_category") }} as category_slug
         from cities
         left join

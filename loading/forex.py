@@ -33,14 +33,16 @@ def get_needed_currencies():
         "select distinct currency from dwh.raw_earnings.job_earnings where currency != 'EUR'"
     ).df()
 
-    return df["currency"].unique()
+    currencies = df["currency"].unique()
+    logging.info(f"Found {len(currencies)} currencies: {', '.join(currencies)}")
+    return currencies
 
 
 def get_forex_data(base_currency, foreign_currency):
     # get forex data from yahoo finance for last 365 days
-    forex_data = yf.download(
-        f"{foreign_currency}{base_currency}=X", start=dt_365daysago, end=dt_yesterday
-    )
+    lookup_string = f"{base_currency}{foreign_currency}=X"
+
+    forex_data = yf.download(lookup_string, start=dt_365daysago, end=dt_yesterday)
     forex_data = forex_data.reset_index()
     forex_data["from_currency"] = foreign_currency
     forex_data["to_currency"] = base_currency
