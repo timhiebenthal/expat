@@ -37,13 +37,13 @@ with
             mapping.activity as activity_name,
             mapping.activity_type,
             case
-                when data.category = 'Apartment (1 bedroom) in City Centre'
+                when data.category = '1 Bedroom Apartment in City Centre'
                 then '1 Room Appart. Center'
-                when data.category = 'Apartment (3 bedrooms) in City Centre'
+                when data.category = '3 Bedroom Apartment in City Centre'
                 then '3 Room Appart. Center'
-                when data.category = 'Apartment (1 bedroom) Outside of Centre'
+                when data.category = '1 Bedroom Apartment Outside of City Centre'
                 then '1 Room Appart. Outside'
-                when data.category = 'Apartment (3 bedrooms) Outside of Centre'
+                when data.category = '3 Bedroom Apartment Outside of City Centre'
                 then '3 Room Appart. Outside'
                 else mapping.activity_type
             end as activity_category,

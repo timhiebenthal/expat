@@ -35,7 +35,7 @@ with
             leisure as expense_leisure,
             mobility as expense_mobility,
             restaurant as expense_restaurant,
-            utilities as expense_utilities,
+            utilities as expense_utilities
 
         from pivot_expenses
     ),

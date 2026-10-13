@@ -1,0 +1,54 @@
+1 Bedroom Apartment Outside of City Centre
+1 Bedroom Apartment in City Centre
+3 Bedroom Apartment Outside of City Centre
+3 Bedroom Apartment in City Centre
+Annual Mortgage Interest Rate (20-Year Fixed, in %)
+Apples (1 kg)
+Average Monthly Net Salary (After Tax)
+Bananas (1 kg)
+Basic Utilities for 85 m2 Apartment (Electricity, Heating, Cooling, Water, Garbage)
+Beef Round or Equivalent Back Leg Red Meat (1 kg)
+Bottle of Wine (Mid-Range)
+Bottled Water (0.33 Liter)
+Bottled Water (1.5 Liter)
+Broadband Internet (Unlimited Data, 60 Mbps or Higher)
+Cappuccino (Regular Size)
+Chicken Fillets (1 kg)
+Cigarettes (Pack of 20, Marlboro)
+Cinema Ticket (International Release)
+Combo Meal at McDonald's (or Equivalent Fast-Food Meal)
+Domestic Beer (0.5 Liter Bottle)
+Domestic Draft Beer (0.5 Liter)
+Eggs (12, Large Size)
+Fresh White Bread (500 g Loaf)
+Gasoline (1 Liter)
+Imported Beer (0.33 Liter Bottle)
+International Primary School, Annual Tuition per Child
+Jeans (Levi's 501 or Similar)
+Lettuce (1 Head)
+Local Cheese (1 kg)
+Meal at an Inexpensive Restaurant
+Meal for Two at a Mid-Range Restaurant (Three Courses, Without Drinks)
+Men's Leather Business Shoes
+Milk (Regular, 1 Liter)
+Mobile Phone Plan (Monthly, with Calls and 10GB+ Data)
+Monthly Fitness Club Membership
+Monthly Public Transport Pass (Regular Price)
+Nike Running Shoes (Mid-Range)
+One-Way Ticket (Local Transport)
+Onions (1 kg)
+Oranges (1 kg)
+Potatoes (1 kg)
+Price per Square Meter to Buy Apartment Outside of Centre
+Price per Square Meter to Buy Apartment in City Centre
+Private Full-Day Preschool or Kindergarten, Monthly Fee per Child
+Soft Drink (Coca-Cola or Pepsi, 0.33 Liter Bottle)
+Summer Dress in a Chain Store (e.g. Zara or H&M)
+Taxi 1 Hour Waiting (Standard Tariff)
+Taxi 1 km (Standard Tariff)
+Taxi Start (Standard Tariff)
+Tennis Court Rental (1 Hour, Weekend)
+Tomatoes (1 kg)
+Toyota Corolla Sedan 1.6 (or Equivalent New Mid-Size Car)
+Volkswagen Golf 1.5 (or Equivalent New Compact Car)
+White Rice (1 kg)

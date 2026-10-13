@@ -64,3 +64,37 @@ def test_missing_table_yields_no_data(costofliving):
     from bs4 import BeautifulSoup
 
     assert costofliving.parse_table_rows(BeautifulSoup("<div/>", "html.parser")) == []
+
+
+def test_city_slug_replaces_spaces_and_keeps_the_bare_city(costofliving):
+    assert (
+        costofliving.build_city_url("Mexico City")
+        == "https://www.numbeo.com/cost-of-living/in/Mexico-City"
+    )
+    assert (
+        costofliving.build_city_url("Munich-Germany")
+        == "https://www.numbeo.com/cost-of-living/in/Munich-Germany"
+    )
+
+
+def test_error_page_without_a_table_is_reported(costofliving, monkeypatch, caplog):
+    """numbeo answers an unknown slug with HTTP 200 and an error page.
+
+    That used to look exactly like a city with no data, so the run finished
+    with an empty table and no explanation.
+    """
+    error_page = "<html><head><title>Cannot find city id for Nowhere</title></head></html>"
+
+    class Response:
+        content = error_page.encode()
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr(costofliving.requests, "get", lambda *a, **kw: Response())
+
+    with caplog.at_level("WARNING"):
+        assert costofliving.get_city_data("Nowhere") is None
+
+    assert "Cannot find city id for Nowhere" in caplog.text
