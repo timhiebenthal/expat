@@ -26,7 +26,12 @@ local_build:
 	docker build -t local_image .
 
 local_deploy:
-	docker run -p 8080:8080 -e ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY} local_image
+	docker rm -f expat-app 2>/dev/null || true
+	docker run -d --name expat-app -p 8080:8080 --env-file .env \
+		-v $(PWD)/database:/app/database local_image
+
+local_stop:
+	docker rm -f expat-app
 
 gcloud_build:
 	gcloud builds submit --tag gcr.io/expat-analytics/streamlit-app:latest --region europe-west1
