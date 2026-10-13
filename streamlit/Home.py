@@ -54,7 +54,8 @@ def retrieve_city_suggestions(form_dict):
         Other information which is important to me is: {criteria}
 
         Please list my current and favourite cities and up to 8 cities which fit my criteria.
-        The response should be purely a JSON Array, where each city is it's own object fitting these descriptions.
+        The response should be a JSON Array where each city is an object with the keys
+        "name", "country" and "description".
         """
     )
 
