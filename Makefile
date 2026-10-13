@@ -43,7 +43,7 @@ gcloud_deploy:
 	--concurrency 2 \
 	--region europe-west3 \
 	--allow-unauthenticated \
-	--set-env-vars ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY} \
+	--set-env-vars NEBIUS_API_KEY=${NEBIUS_API_KEY} \
 
 gcloud_delete:
 	gcloud run services delete expat-streamlit-app
