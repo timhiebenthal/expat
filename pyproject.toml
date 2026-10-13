@@ -29,7 +29,7 @@ dependencies = [
     "dbt-duckdb<2",
     "yfinance",
     "langchain",
-    "langchain-anthropic",
+    "langchain-openai",
     "python-dotenv",
     "streamlit<2",
     "duckdb<2",
