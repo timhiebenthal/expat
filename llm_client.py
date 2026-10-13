@@ -9,20 +9,32 @@ explicit ``base_url`` rather than a bespoke client.
 """
 
 import os
+from pathlib import Path
 from typing import List, Optional
 
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-NEBIUS_BASE_URL = os.getenv(
-    "NEBIUS_BASE_URL", "https://api.tokenfactory.nebius.com/v1"
-)
+REPO_ROOT = Path(__file__).resolve().parent
+
+DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1"
 
 # Cheapest text model Nebius flags for both JSON mode and function calling.
 # Override with NEBIUS_MODEL, e.g. deepseek-ai/DeepSeek-V4.1-Flash.
 DEFAULT_MODEL = "deepseek-ai/DeepSeek-V4-Flash-0731"
 
 DEFAULT_MAX_TOKENS = 5000
+
+
+def load_env() -> None:
+    """Load the repo-root .env.
+
+    Resolved relative to this file rather than the working directory, so it works
+    from streamlit/, from loading/, and from the repo root alike. Real environment
+    variables win, which is what keeps Docker's --env-file authoritative.
+    """
+    load_dotenv(REPO_ROOT / ".env")
 
 
 def build_chat_model(temperature: float = 0, max_tokens: int = DEFAULT_MAX_TOKENS):
@@ -35,16 +47,17 @@ def build_chat_model(temperature: float = 0, max_tokens: int = DEFAULT_MAX_TOKEN
     depends on. Note DeepSeek's own ``thinking: {"type": "disabled"}`` form is
     silently ignored by Nebius - ``reasoning_effort`` is the knob that works.
     """
+    load_env()
+
     api_key = os.getenv("NEBIUS_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "NEBIUS_API_KEY is not set. Add it to .env and load it into the "
-            "environment (or add a load_dotenv() call at process start)."
+            "NEBIUS_API_KEY is not set. Add it to .env (see .env.example)."
         )
 
     return ChatOpenAI(
         model=os.getenv("NEBIUS_MODEL", DEFAULT_MODEL),
-        base_url=NEBIUS_BASE_URL,
+        base_url=os.getenv("NEBIUS_BASE_URL", DEFAULT_BASE_URL),
         api_key=api_key,
         temperature=temperature,
         max_tokens=max_tokens,
