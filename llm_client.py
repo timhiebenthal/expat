@@ -1,0 +1,80 @@
+"""Shared Nebius LLM client for the Expat pipeline.
+
+Both entry points (``streamlit/Home.py`` and ``loading/llm_earnings.py``)
+construct their chat model here, so the provider, model id and token budget
+live in exactly one place.
+
+Nebius exposes an OpenAI-compatible API, so ``ChatOpenAI`` is used with an
+explicit ``base_url`` rather than a bespoke client.
+"""
+
+import os
+from typing import List, Optional
+
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field
+
+NEBIUS_BASE_URL = os.getenv(
+    "NEBIUS_BASE_URL", "https://api.tokenfactory.nebius.com/v1"
+)
+
+# Cheapest text model Nebius flags for both JSON mode and function calling.
+# Override with NEBIUS_MODEL, e.g. deepseek-ai/DeepSeek-V4.1-Flash.
+DEFAULT_MODEL = "deepseek-ai/DeepSeek-V4-Flash-0731"
+
+DEFAULT_MAX_TOKENS = 5000
+
+
+def build_chat_model(temperature: float = 0, max_tokens: int = DEFAULT_MAX_TOKENS):
+    """Return a chat model pointed at Nebius.
+
+    Reasoning is pinned off via ``extra_body``. DeepSeek reasons by default on
+    this API, and ``reasoning_effort="low"`` is indistinguishable from the
+    default, so there is no useful middle setting. Reasoning would also make the
+    server ignore ``temperature``, costing us the determinism the earnings job
+    depends on. Note DeepSeek's own ``thinking: {"type": "disabled"}`` form is
+    silently ignored by Nebius - ``reasoning_effort`` is the knob that works.
+    """
+    api_key = os.getenv("NEBIUS_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "NEBIUS_API_KEY is not set. Add it to .env and load it into the "
+            "environment (or add a load_dotenv() call at process start)."
+        )
+
+    return ChatOpenAI(
+        model=os.getenv("NEBIUS_MODEL", DEFAULT_MODEL),
+        base_url=NEBIUS_BASE_URL,
+        api_key=api_key,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        timeout=None,
+        max_retries=2,
+        extra_body={"reasoning_effort": "none"},
+    )
+
+
+class CityEarnings(BaseModel):
+    """One city's salary data for a given job."""
+
+    city: str
+    country: str
+    currency: str
+    jobtitle_and_experience: str
+    average_monthly_gross_salary: float
+    net_to_gross_salary_ratio: float
+
+
+class CityEarningsList(BaseModel):
+    cities: List[CityEarnings]
+
+
+class CitySuggestion(BaseModel):
+    city: str
+    why: Optional[str] = Field(
+        default=None, description="Why this city fits the stated criteria."
+    )
+
+
+class CitySuggestionList(BaseModel):
+    cities: List[CitySuggestion]
