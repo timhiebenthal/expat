@@ -14,12 +14,23 @@ RUN apt-get install -y nodejs
 RUN apt-get install -y git
 RUN apt-get install -y build-essential
 
-# Copy the requirements file and install dependencies
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+# Install dependencies with uv, locked. Copied on their own so the (slow)
+# dependency layer is cached independently of the application source.
+COPY --from=ghcr.io/astral-sh/uv:0.10.8 /uv /uvx /bin/
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy the rest of the application code
 COPY . .
+
+# Fail the build rather than the browser. pyarrow hard-requires numpy>=2 but
+# declares no numpy dependency, so an unconstrained resolver will happily
+# produce an image that only breaks once Streamlit calls st.data_editor.
+# Deliberately provider-agnostic: the LLM client differs per branch.
+RUN python -c "import pandas, duckdb, streamlit, pyarrow, numpy"
 
 # Add build argument for development mode
 ARG DEVELOPMENT_MODE=false

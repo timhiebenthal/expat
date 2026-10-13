@@ -1,5 +1,11 @@
 install_requirements:
-	pip install -r requirements.txt
+	uv sync
+
+test:
+	uv run pytest tests -v
+
+run_tests_docker:
+	docker build -t local_image . && docker run --rm --env-file .env local_image uv run pytest tests -v
 
 load_data:
 	python loading/llm_earnings.py && python loading/forex.py && python loading/costofliving.py

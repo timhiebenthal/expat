@@ -1,24 +1,34 @@
-[tool.poetry]
+[project]
 name = "expat-calc"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+description = "Expat relocation cost-of-living and earnings comparison"
 readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "pandas==2.2.2",
+    "beautifulsoup4==4.12.3",
+    "requests==2.32.2",
+    "dlt==0.4.3",
+    "dbt-core==1.8.1",
+    "dbt-duckdb==1.8.0",
+    # pyarrow (pulled in by streamlit) hard-requires numpy>=2 but declares no
+    # numpy dependency, so the resolver will not surface a conflict. Pin it
+    # explicitly, otherwise a downgrade reintroduces the runtime ImportError.
+    "numpy>=2.0.2",
+    "yfinance==0.2.40",
+    "langchain",
+    "langchain-anthropic",
+    "python-dotenv",
+    "streamlit==1.37.0",
+    "duckdb==0.10.3",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.12,<3.13"
-pandas = "^2.2.2"
-beautifulsoup4 = "^4.12.3"
-requests = "^2.32.2"
-dlt = "^0.4.12"
-harlequin = "^1.20.0"
-dbt-core = "^1.8.1"
-dbt-duckdb = "^1.8.0"
+[dependency-groups]
+dev = [
+    "pytest",
+    "shandy-sqlfmt[jinjafmt]==0.21.3",
+]
 
-
-[tool.poetry.group.dev.dependencies]
-ipykernel = "^6.29.4"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# This is an application, not a library - nothing to build or publish.
+[tool.uv]
+package = false

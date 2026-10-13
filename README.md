@@ -20,6 +20,24 @@ This reflects also in the choice of tooling: the pipeline isn't meant to scale t
     contains the streamlit app acting as the UI for the end user
 <!-- - llm -->
 
+### Development
+
+Dependencies are managed with [uv](https://docs.astral.sh/uv/). `pyproject.toml` is
+the single source of truth and `uv.lock` is committed.
+
+```bash
+uv sync          # install
+uv run pytest    # run the tests
+```
+
+The SQL formatter `harlequin` is a standalone CLI and is deliberately not a project
+dependency - every published version either pins `numpy<2` (1.x) or forces
+`duckdb>=1.1.1` (2.x), both of which break the pinned runtime. Install it separately:
+
+```bash
+uv tool install harlequin
+```
+
 
 ### Potential Features / To Do List:
 
