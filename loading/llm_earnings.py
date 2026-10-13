@@ -1,10 +1,14 @@
 import os
 import json
+import sys
 import yaml
 from langchain_core.prompts.few_shot import FewShotPromptTemplate
-from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from llm_client import build_chat_model, CityEarningsList
+
 import utils
 import logging
 
@@ -29,14 +33,7 @@ pipeline = utils.define_dlt_pipeline(DESTINATION_SCHEMA)
 
 
 def retrieve_city_data(list_of_cities, fields_of_interest, job):
-    max_output_tokens = 1800
-    model = ChatAnthropic(
-        model="claude-3-5-sonnet-20240620",
-        temperature=0,
-        max_tokens=max_output_tokens,
-        timeout=None,
-        max_retries=2,
-    )
+    model = build_chat_model(temperature=0)
 
     logging.info(
         f"Retrieving data from LLM model for {len(list_of_cities)} cities ... "
@@ -46,16 +43,12 @@ def retrieve_city_data(list_of_cities, fields_of_interest, job):
         The answer should be purely a JSON Array where each city is it's own object with { ', '.join(fields_of_interest)} as keys.
         For the salary consider the average monthly gross salary for a {job} and return only a JSON Object without any other text"""
 
-    # response = model.invoke(prompt_input)
-
-    # # if response.response_metadata['output_tokens'] == max_output_tokens:
-    # #     raise Exception("Output token limit reached. Please increase the max_output_tokens parameter or iterate")
-    # print(response.content)
-
-    parser = JsonOutputParser()
     prompt = PromptTemplate(template=prompt_input)
 
-    chain = prompt | model | parser
+    # Structured output rather than JsonOutputParser: DeepSeek wraps JSON in
+    # markdown fences, which the parser can't read. This also guarantees the
+    # keys match what the job_earnings primary key expects.
+    chain = prompt | model.with_structured_output(CityEarningsList)
 
     response = chain.invoke(
         {
@@ -63,9 +56,10 @@ def retrieve_city_data(list_of_cities, fields_of_interest, job):
         }
     )
 
-    logging.info(f"Retrieved data of {len(response)} cities.")
+    cities = response.cities
+    logging.info(f"Retrieved data of {len(cities)} cities.")
 
-    return response
+    return [city.model_dump() for city in cities]
 
 
 def run_pipeline():
