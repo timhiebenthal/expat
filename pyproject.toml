@@ -5,22 +5,34 @@ description = "Expat relocation cost-of-living and earnings comparison"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
-    "pandas==2.2.2",
-    "beautifulsoup4==4.12.3",
-    "requests==2.32.2",
-    "dlt==0.4.3",
-    "dbt-core==1.8.1",
-    "dbt-duckdb==1.8.0",
-    # pyarrow (pulled in by streamlit) hard-requires numpy>=2 but declares no
-    # numpy dependency, so the resolver will not surface a conflict. Pin it
-    # explicitly, otherwise a downgrade reintroduces the runtime ImportError.
+    # --- constraints that encode breakage we actually hit. Keep these. ---
+    # pyarrow hard-requires numpy>=2 but declares no numpy dependency at all,
+    # so nothing in the graph surfaces the conflict; without this floor uv
+    # will happily resolve numpy 1.x.
     "numpy>=2.0.2",
-    "yfinance==0.2.40",
+    # dlt imports pkg_resources, which setuptools removed in v81. This is a
+    # ceiling we cannot lift until dlt drops the import.
+    "setuptools<81",
+    # dlt imports tqdm without declaring it. It used to arrive via
+    # shandy-sqlfmt, now a dev dependency, so declare it explicitly.
+    "tqdm",
+
+    # --- everything else: major-version ceiling only. ---
+    # uv.lock holds the exact versions, so these are not pins in the usual
+    # sense - they exist to stop `uv lock --upgrade` from crossing a breaking
+    # release unattended.
+    "pandas<4",
+    "beautifulsoup4",
+    "requests",
+    "dlt<2",
+    "dbt-core<2",
+    "dbt-duckdb<2",
+    "yfinance",
     "langchain",
     "langchain-anthropic",
     "python-dotenv",
-    "streamlit==1.37.0",
-    "duckdb==0.10.3",
+    "streamlit<2",
+    "duckdb<2",
 ]
 
 [dependency-groups]

@@ -30,13 +30,13 @@ def test_no_installed_package_excludes_numpy_2():
     offenders = []
     for dist in distributions():
         for raw in dist.requires or []:
-            if "extra ==" in raw:
-                # An extra nobody asked for constrains nothing. If it is ever
-                # activated, pip re-resolves and the pyarrow canary above is
-                # what catches the resulting mismatch.
-                continue
             requirement = Requirement(raw)
             if requirement.name != "numpy":
+                continue
+            # Evaluate the marker against this interpreter. Extras nobody
+            # requested, and python_version branches for other interpreters,
+            # constrain nothing here.
+            if requirement.marker and not requirement.marker.evaluate({"extra": ""}):
                 continue
             if Version("2.0.0") not in requirement.specifier:
                 offenders.append(f"{dist.metadata['Name']}=={dist.version}: {raw}")
