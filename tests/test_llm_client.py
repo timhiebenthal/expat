@@ -4,6 +4,8 @@ These cover configuration resolution without touching the network. The default
 ChatOpenIC construction performs no I/O, so these stay fast and offline.
 """
 
+import re
+
 import pytest
 
 import llm_client
@@ -97,3 +99,33 @@ def test_earnings_schema_matches_the_dwh_primary_key():
         "average_monthly_gross_salary",
         "net_to_gross_salary_ratio",
     ]
+
+
+def _source_columns_selected_in(model_path):
+    """Columns a dbt model reads from its source, e.g. 'name as city_name' -> name."""
+    sql = model_path.read_text()
+    select_clause = sql.split("from")[0]
+    select_clause = re.sub(r"^\s*select\s+", "", select_clause, flags=re.I)
+    columns = []
+    for part in select_clause.replace("\n", " ").split(","):
+        part = part.strip()
+        if not part or part.startswith("--"):
+            continue
+        columns.append(part.split(" as ")[0].strip().strip('"'))
+    return columns
+
+
+def test_city_suggestion_matches_the_dbt_config_contract():
+    """The app writes LLM suggestions straight into raw_config.cities, which
+    clean__config_cities then selects from. Renaming a field here breaks the
+    dbt build with a Binder Error naming a column that does not exist."""
+    model = llm_client.REPO_ROOT / "dbt/models/1-clean/config/clean__config_cities.sql"
+    required = _source_columns_selected_in(model)
+
+    assert required, "could not parse columns out of clean__config_cities.sql"
+    missing = [c for c in required if c not in llm_client.CitySuggestion.model_fields]
+    assert not missing, (
+        f"clean__config_cities.sql selects {required} from source('config','cities'), "
+        f"but CitySuggestion has no field(s) {missing}"
+    )
+

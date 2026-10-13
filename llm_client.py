@@ -83,8 +83,15 @@ class CityEarningsList(BaseModel):
 
 
 class CitySuggestion(BaseModel):
-    city: str
-    why: Optional[str] = Field(
+    """A city proposed by the LLM.
+
+    Field names are load-bearing: these land in raw_config.cities, and
+    clean__config_cities.sql selects `name` and `country` from it.
+    """
+
+    name: str
+    country: Optional[str] = None
+    description: Optional[str] = Field(
         default=None, description="Why this city fits the stated criteria."
     )
 
