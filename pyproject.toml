@@ -44,3 +44,8 @@ dev = [
 # This is an application, not a library - nothing to build or publish.
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+# llm_client.py lives at the repo root, not in a package.
+pythonpath = ["."]
+testpaths = ["tests"]
