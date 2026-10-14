@@ -90,7 +90,7 @@ def currency_rates(
             base_currency, foreign_currency, download=download, start=start, end=end
         )
         if rows:
-            data.append(rows)
+            data.extend(rows)
         else:
             failed_currencies.append(foreign_currency)
 
