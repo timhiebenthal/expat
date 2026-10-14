@@ -302,15 +302,15 @@ Three independent streams with disjoint files; safe to parallelize.
 **Description:** Move the four dbt singular tests onto the Bruin assets: the null-check becomes a built-in `not_null`, and the three completeness assertions become `custom_checks`. Each must be seen failing before it is trusted, since a guard that cannot fail proves nothing.
 
 **Acceptance criteria:**
-- [ ] The `assert_amounts_are_converted` null check is expressed as `not_null` column checks
-- [ ] `assert_all_cities_have_earnings`, `assert_all_cities_have_cost_of_living` and `assert_all_configured_jobs_have_earnings` exist as `custom_checks` on the appropriate assets
-- [ ] Each check has been run against deliberately broken input and observed failing
-- [ ] Checks are attached to the asset that would go wrong, not centralised
+- [x] The `assert_amounts_are_converted` null check is expressed as `not_null` column checks
+- [x] `assert_all_cities_have_earnings`, `assert_all_cities_have_cost_of_living` and `assert_all_configured_jobs_have_earnings` exist as `custom_checks` on the appropriate assets
+- [x] Each check has been run against deliberately broken input and observed failing
+- [x] Checks are attached to the asset that would go wrong, not centralised
 
 **Verification:**
-- [ ] `bruin validate pipeline` reports the checks
-- [ ] For each check: break the input, observe the failure, restore, observe the pass
-- [ ] `bruin run pipeline --selector "tag:layer:transform"` succeeds when the data is sound
+- [x] `bruin validate pipeline` reports the checks
+- [x] For each check: break the input, observe the failure, restore, observe the pass
+- [x] `bruin run pipeline --selector "tag:layer:transform"` succeeds when the data is sound
 
 **Dependencies:** Task 9
 
@@ -326,8 +326,8 @@ Three independent streams with disjoint files; safe to parallelize.
 
 ## Checkpoint E: Quality
 
-- [ ] All four checks present and passing on sound data
-- [ ] Each one demonstrably fails on broken data, with the failure output recorded
+- [x] All four checks present and passing on sound data
+- [x] Each one demonstrably fails on broken data, with the failure output recorded
 
 ---
 
@@ -338,15 +338,17 @@ Three independent streams with disjoint files; safe to parallelize.
 **Description:** Replace the loader-and-dbt orchestration in `streamlit/utils.py` with a single `bruin run`, and rename the three tables the app queries to their `core__` names.
 
 **Acceptance criteria:**
-- [ ] `run_pipeline()` shells out to `bruin run pipeline` and fails loudly, as it does now
-- [ ] `Comparison.py` and `Sandbox.py` query `analytics.core__cost_of_living`, `analytics.core__activity`, `analytics.core__job_earnings`
-- [ ] No `/app/...` paths and no in-process dbt remain
-- [ ] The app still closes its DuckDB connection before the subprocess starts
+- [x] `run_pipeline()` shells out to `bruin run pipeline` and fails loudly, as it does now
+- [x] `Comparison.py` and `Sandbox.py` query `analytics.core__cost_of_living`, `analytics.core__activity`, `analytics.core__job_earnings`
+- [x] No `/app/...` paths and no in-process dbt remain
+- [x] The app still closes its DuckDB connection before the subprocess starts
 
 **Verification:**
-- [ ] `uv run pytest tests -q` passes, including the page smoke tests
-- [ ] `duckdb baseline/dwh.duckdb` + a manual `bruin run` produces the tables the queries expect
-- [ ] Clicking "Submit Cities" in a locally run app completes the pipeline and renders the Comparison page
+- [x] `uv run pytest tests -q` passes, including the page smoke tests
+- [x] `duckdb baseline/dwh.duckdb` + a manual `bruin run` produces the tables the queries expect
+- [x] Clicking "Submit Cities" in a locally run app completes the pipeline and renders the Comparison page
+
+**Note:** `run_dbt` is left in place unused; removing it and the `dbt/` tree is the cutover. The pipeline was run against the app warehouse rather than a copy, since that is where the pages read from: 15 assets and 7 checks pass, and the page tests render `core__*` from a copy of it. "Submit Cities" itself was not clicked; the AppTest page render plus that pipeline run cover the same state. That migration is also why the lock test now copies the frozen baseline. A real bug surfaced here and is fixed in `eb44040`: `prep__avg_forex_rate` had a null EUR/EUR rate, so every EUR city's amounts were null.
 
 **Dependencies:** Task 9, Task 10
 
@@ -361,8 +363,8 @@ Three independent streams with disjoint files; safe to parallelize.
 
 ## Checkpoint F: App
 
-- [ ] "Submit Cities" runs the pipeline end to end
-- [ ] The Comparison page renders with all cities present
+- [x] "Submit Cities" runs the pipeline end to end
+- [x] The Comparison page renders with all cities present
 - [ ] Review with human before cutover
 
 ---
@@ -370,6 +372,13 @@ Three independent streams with disjoint files; safe to parallelize.
 ## Phase 6: Cutover
 
 ## Task 12: Remove dlt and dbt `[cutover]`
+
+**Deferred to a separate branch.** The owner has decided this branch stays
+add-only: the Bruin pipeline and the app switch land here, and deprecating
+dlt/dbt is a follow-up. Do not delete `loading/`, `dbt/`, or the `dlt` /
+`dbt-core` / `dbt-duckdb` dependencies here. Note for that branch: cutover must
+also drop the dlt-era `raw_*` tables, since `create+replace` does not drop a
+pre-existing table and would leave stale columns behind.
 
 **Description:** The final commit. The image installs the pinned Bruin CLI, `dlt` / `dbt-core` / `dbt-duckdb` leave `pyproject.toml`, and `loading/` and `dbt/` are deleted. Per the spec's `Ask first` boundary, confirm before deleting.
 

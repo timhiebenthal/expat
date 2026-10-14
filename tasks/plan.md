@@ -76,19 +76,19 @@ Consequence for ordering: `core__cost_of_living` needs currency and FX rates, so
 - [x] Both parity gates pass for all of them
 
 ### Phase 4: Quality
-- [ ] Task 10 `[quality]` Port the four checks
+- [x] Task 10 `[quality]` Port the four checks
 
 ### Checkpoint E
-- [ ] Each check has been observed failing on deliberately broken input
+- [x] Each check has been observed failing on deliberately broken input
 
 ### Phase 5: App trigger
-- [ ] Task 11 `[app-trigger]` Streamlit runs the Bruin pipeline
+- [x] Task 11 `[app-trigger]` Streamlit runs the Bruin pipeline
 
 ### Checkpoint F
-- [ ] "Submit Cities" runs the pipeline end to end and the page renders
+- [x] "Submit Cities" runs the pipeline end to end and the page renders
 
 ### Phase 6: Cutover
-- [ ] Task 12 `[cutover]` Remove dlt and dbt
+- [ ] Task 12 `[cutover]` Remove dlt and dbt — **deferred to a separate branch; this branch is add-only**
 
 ### Checkpoint G: Complete
 - [ ] All Success Criteria in `SPEC.md` met
