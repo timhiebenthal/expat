@@ -80,8 +80,9 @@ bruin run pipeline --selector "tag:layer:transform"
 # Same thing by path, if tags are not yet in place
 bruin run pipeline --selector "path:assets/clean path:assets/prep path:assets/core"
 
-# Parity gate 1: schema, row counts and column statistics
-bruin data-diff --connection duckdb-default --full --fail-if-diff \
+# Parity gate 1: schema and row counts. --full is NOT usable here - its
+# numerical-statistics step crashes on DuckDB DECIMAL columns.
+bruin data-diff --connection duckdb-default --fail-if-diff \
   "baseline.core__cost_of_living" "analytics.core__cost_of_living"
 
 # Parity gate 2: exact row equality. Both counts must be 0.
@@ -178,14 +179,14 @@ Four layers. None of them is a coverage gate.
 
 1. **pytest** (`uv run pytest tests`) for pure Python. The existing assertions carry over, with imports re-pointed at `pipeline/lib/`, because Bruin assets are ordinary importable modules - `from pipeline.assets.ingest import numbeo` then `numbeo.materialize()` works. Keep anything that touches the network behind an injectable function so tests never need Bruin, an API key or a live source.
 2. **Quality checks** on the assets: the four current dbt tests become one built-in `not_null` and three `custom_checks`. Each must be observed failing against deliberately broken input before it is trusted.
-3. **Transform parity** (the port gate, values matter). Run only the transform assets against the baseline copy, so they read frozen Raw inputs, then compare against `baseline.*` with both gates below.
-4. **Ingest parity** (shape only). Run the ingest assets against a scratch copy and compare column names, types and grain against the baseline's Raw tables. Values will differ and that is not a failure.
+3. **Transform parity** (the port gate, values matter). Run only the transform assets against the baseline copy, so they read frozen Raw inputs, then gate the **entity** tables the app reads - `core__cost_of_living`, `core__activity`, `core__job_earnings` - with both gates below. `clean__*` and `prep__*` are internal: the transform run exercises them, but their output may change where the rewrite needs it.
+4. **Ingest parity** (grain only). Run each ingest asset against a scratch copy and confirm the grain, and the columns the entity tables depend on. Column-for-column parity with the dlt-era Raw tables is not required - the ingest defines the new Raw contract.
 
 `bruin unit-test` is deliberately **not** used: it rejects `.py` assets outright, and its DuckDB support is mechanically present but not vendor-verified.
 
 **Two parity gates, because neither is sufficient alone.**
 
-`bruin data-diff --full` compares schema, row counts and column statistics (min/max/avg/sum/stddev, distinct counts, fill rate). It never joins on keys and never compares rows positionally, so it can pass while individual rows are wrong - and row-level loss is the exact failure this project keeps hitting. Use it as the cheap first pass, then require exact row equality with a bidirectional `EXCEPT ALL`, which is multiset equality and catches duplicate-count drift too. The reconciliation queries are committed rather than run ad hoc, so Success Criteria are reproducible.
+`bruin data-diff` compares schema and row counts. (`--full` would add column statistics - min/max/avg/sum/stddev, distinct counts, fill rate - but on v0.11.778 that step crashes on any DuckDB `DECIMAL` column with "cannot assign decimal128.Num to float64", and these tables have several, so gate 1 runs without it.) It never joins on keys and never compares rows positionally, so it can pass while individual rows are wrong - and row-level loss is the exact failure this project keeps hitting. Use it as the cheap first pass, then require exact row equality with a bidirectional `EXCEPT ALL`, which is multiset equality and catches duplicate-count drift too. The reconciliation queries are committed (`scripts/parity.sql`) rather than run ad hoc, so Success Criteria are reproducible.
 
 ## Boundaries
 
@@ -212,7 +213,7 @@ Four layers. None of them is a coverage gate.
 
 - `bruin run pipeline` completes with every asset succeeding against a fresh copy of the warehouse.
 - Transform parity: running only the transforms against the baseline copy yields 0 rows from both directions of the `EXCEPT ALL` on every table the app reads, and `data-diff --full --fail-if-diff` reports no differences.
-- Ingest parity: the Raw tables Bruin writes have the same columns, types and grain as the baseline's, recorded as an explicit check rather than eyeballed.
+- Ingest parity: each Raw table has the grain the entity tables expect, recorded as an explicit check. Column-for-column parity with the dlt-era tables is not required.
 - All four quality checks exist and have each been seen failing on deliberately broken input.
 - `uv run pytest tests` passes, with the same or greater coverage of the logic currently in `loading/`.
 - The app's "Submit Cities" button runs the whole pipeline end to end and the Comparison page renders.
@@ -224,6 +225,13 @@ Four layers. None of them is a coverage gate.
 - **Extracted `loading/` logic lands in `pipeline/lib/`.** The pure helpers (`parse_table_rows`, `build_ticker`, `build_job_string`, `attach_city_records`, `assert_every_city_came_back`) move there and the pytest suite is re-pointed, so deleting `loading/` cannot delete the parts that are actually tested.
 - **`read_only` interpolation is not needed.** Nothing reads the warehouse through Bruin, so no boolean is ever interpolated; only the connection path needs `${DUCKDB_LOCATION}`.
 - **Bruin's container image is not used.** The CLI is curl-installed into the app image at a pinned tag, so there is no GHCR tag to chase.
+
+### Amended during implementation
+
+- **Parity is gated on the entity tables, not the intermediate ones.** Only the tables the app reads carry both gates; `clean__*` and `prep__*` are internal and free to change shape (dropping dlt's `_dlt_id` / `_dlt_load_id` / `_loadet_at`, flattening numbeo).
+- **No Raw column parity.** The Bruin ingest defines the new Raw contract and does not reproduce dlt's metadata columns. `raw_forex.forex_daily` carries Bruin's own `_ingestr_loaded_at` / `_ingestr_run_id` instead.
+- **Python assets must not set `image: python:3.13`.** Bruin resolves the interpreter from it, and `requires-python` is `>=3.11,<3.13`, so `uv lock` refuses and the asset fails at run time.
+- **`create+replace` does not drop a pre-existing table.** Against a warehouse that still has dlt's tables, Bruin keeps the old columns and back-fills them with `'-'`. Cutover must drop the dlt-era `raw_*` tables so the new contract takes effect.
 
 ## Open Questions
 

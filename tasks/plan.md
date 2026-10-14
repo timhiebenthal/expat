@@ -60,7 +60,7 @@ Consequence for ordering: `core__cost_of_living` needs currency and FX rates, so
 - [x] No network access anywhere under `pipeline/lib/`
 
 ### Phase 2: Forex and earnings paths (app-visible: `core__job_earnings`)
-- [ ] Task 6 `[ingest]` Forex path end to end
+- [x] Task 6 `[ingest]` Forex path end to end
 - [ ] Task 7 `[ingest]` Earnings path end to end
 
 ### Checkpoint C
