@@ -14,6 +14,28 @@ depends:
 tags:
   - layer:transform
   - layer:core
+
+# assert_amounts_are_converted, as column checks: a null EUR amount means the
+# currency had no forex rate.
+columns:
+  - name: avg_monthly_gross_salary_eur
+    type: double
+    checks:
+      - name: not_null
+  - name: avg_monthly_net_salary_eur
+    type: double
+    checks:
+      - name: not_null
+
+custom_checks:
+  # assert_all_cities_have_earnings. job_earnings left-joins the forex rates, so
+  # a city whose currency is missing from forex_daily just disappears. London did.
+  - name: every configured city has earnings
+    query: |
+      select count(*)
+      from analytics.clean__config_cities
+      where city_name not in (select city_name from analytics.core__job_earnings)
+    value: 0
 @bruin */
 
 -- entity_id reproduces dbt_utils.generate_surrogate_key exactly: md5 over the

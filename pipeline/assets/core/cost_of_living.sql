@@ -14,6 +14,27 @@ depends:
 tags:
   - layer:transform
   - layer:core
+
+# assert_amounts_are_converted, as column checks.
+columns:
+  - name: cost_eur
+    type: double
+    checks:
+      - name: not_null
+  - name: monthly_activity_cost_eur
+    type: double
+    checks:
+      - name: not_null
+
+custom_checks:
+  # assert_all_cities_have_cost_of_living. prep inner-joins the scraped labels
+  # against the seed mapping, so a city whose labels stop matching goes quiet.
+  - name: every configured city has cost of living
+    query: |
+      select count(*)
+      from analytics.clean__config_cities
+      where city_name not in (select city_name from analytics.core__cost_of_living)
+    value: 0
 @bruin */
 
 -- Port of the dbt model, minus dlt's city_id (unread by the app, and no longer

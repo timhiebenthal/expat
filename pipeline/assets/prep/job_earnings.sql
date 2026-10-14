@@ -14,6 +14,22 @@ depends:
 tags:
   - layer:transform
   - layer:prep
+
+custom_checks:
+  # assert_all_configured_jobs_have_earnings. The check sits on prep because prep
+  # is the join that drops a job: it matches on parsed title AND experience, so a
+  # job with no earnings disappears on its own while the others keep the cities.
+  - name: every configured job has earnings
+    query: |
+      select count(*)
+      from analytics.clean__config_jobs as config
+      where not exists (
+          select 1
+          from analytics.prep__job_earnings as earnings
+          where earnings.job_title = config.job_title
+            and earnings.job_experience = config.job_experience
+      )
+    value: 0
 @bruin */
 
 -- The join is on job title AND experience. Dropping either side of it is what
