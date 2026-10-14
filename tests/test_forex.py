@@ -3,12 +3,12 @@
 Two things used to go wrong here and both were silent:
 
 - the ticker ran in the wrong direction, so the GBP rate was the reciprocal of
-  the one the dbt models assume (they divide by it to reach EUR)
-- a currency that yahoo refused to serve was dropped from the table, and dbt
-  then dropped the cities that used it
+  the one the models assume (they divide by it to reach EUR)
+- a currency that yahoo refused to serve was dropped from the table, and the
+  conversion join then dropped the cities that used it
 
-The logic under test lives in `pipeline/lib/forex.py`; `loading/forex.py` stays
-as the dlt-era caller until cutover.
+The logic under test lives in `pipeline/lib/forex.py`, which the forex ingest
+asset calls.
 """
 
 import pandas as pd

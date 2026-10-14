@@ -29,5 +29,6 @@ documents it names.
 
 - The migration contract, its amendments and the Bruin v0.11.778 gotchas:
   `docs/specs/2026-10-14-bruin-migration/`.
-- Cutover is deferred to its own branch: removing `dlt` / `dbt` and `loading/` / `dbt/`, and dropping
-  the dlt-era `raw_*` tables, since `create+replace` never drops a pre-existing table.
+- The cutover landed: `dlt` and `dbt` are out of the dependencies and their trees are gone. The
+  dlt-era `raw_*` tables were dropped too, because `create+replace` never drops a pre-existing table,
+  so the old columns survived the ingest until the tables themselves were removed.

@@ -1,4 +1,4 @@
-"""The earnings loader has to hand dbt a job title it can join on.
+"""The earnings ingest has to hand the prep layer a job title it can join on.
 
 prep__job_earnings parses jobtitle_and_experience back into a title and inner
 joins it against clean__config_jobs. The model is asked for that string, and
@@ -6,8 +6,8 @@ asking is not enough: it returned "Staff Analytics Engineer, 10 years" for a
 configured "Analytics Engineer", so the join matched nothing and every city
 vanished from job_earnings with no error anywhere.
 
-The logic under test lives in `pipeline/lib/earnings.py`; `loading/llm_earnings.py`
-stays as the dlt-era caller until cutover.
+The logic under test lives in `pipeline/lib/earnings.py`, which the earnings ingest
+asset calls.
 """
 
 import pytest
