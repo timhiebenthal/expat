@@ -1,8 +1,8 @@
 """Shared Nebius LLM client for the Expat pipeline.
 
-Both entry points (``streamlit/Home.py`` and ``loading/llm_earnings.py``)
-construct their chat model here, so the provider, model id and token budget
-live in exactly one place.
+Both entry points (``streamlit/Home.py`` and the Bruin earnings asset) construct
+their chat model here, so the provider, model id and token budget live in exactly
+one place.
 
 Nebius exposes an OpenAI-compatible API, so ``ChatOpenAI`` is used with an
 explicit ``base_url`` rather than a bespoke client.

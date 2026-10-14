@@ -5,8 +5,8 @@ its own, so `make streamlit_app` used to die with KeyError: 'DUCKDB_LOCATION' th
 moment a page touched DuckDB. Docker and Cloud Run set the variable for real and
 must keep winning over .env.
 
-Each case runs in a subprocess because `utils` is cached in sys.modules and the
-two modules (loading/ and streamlit/) share the name.
+Each case runs in a subprocess because `utils` caches DATABASE_LOCATION at import
+time, so a fresh environment needs a fresh interpreter.
 """
 
 import os
@@ -37,19 +37,19 @@ def resolve(module_dir, env_overrides):
     ).stdout.strip()
 
 
-@pytest.mark.parametrize("module_dir", ["loading", "streamlit"])
+@pytest.mark.parametrize("module_dir", ["streamlit"])
 def test_falls_back_to_the_warehouse_when_unset(module_dir):
     assert resolve(module_dir, {}) == DEFAULT
 
 
-@pytest.mark.parametrize("module_dir", ["loading", "streamlit"])
+@pytest.mark.parametrize("module_dir", ["streamlit"])
 def test_real_environment_wins(module_dir):
     assert resolve(module_dir, {"DUCKDB_LOCATION": "/tmp/other.duckdb"}) == (
         "/tmp/other.duckdb"
     )
 
 
-@pytest.mark.parametrize("module_dir", ["loading", "streamlit"])
+@pytest.mark.parametrize("module_dir", ["streamlit"])
 def test_relative_path_is_anchored_at_the_repo_root(module_dir):
     """A relative value in .env must not depend on the working directory."""
     assert resolve(module_dir, {"DUCKDB_LOCATION": "database/dwh.duckdb"}) == DEFAULT
