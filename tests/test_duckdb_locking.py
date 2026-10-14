@@ -14,12 +14,30 @@ pin down.
 """
 
 import os
+import shutil
 import sys
 
 import pytest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STREAMLIT_DIR = os.path.join(REPO_ROOT, "streamlit")
+
+
+def _has_dlt_raw(path):
+    """dbt reads dlt's raw columns, so it can only build on a dlt-shaped file."""
+    import duckdb
+
+    con = duckdb.connect(path, read_only=True)
+    try:
+        columns = {
+            row[0]
+            for row in con.execute("describe raw_numbeo.cost_of_living").fetchall()
+        }
+    except duckdb.Error:
+        return False
+    finally:
+        con.close()
+    return "_dlt_id" in columns
 
 
 @pytest.fixture(scope="module")
@@ -46,14 +64,28 @@ def duckdb_fds_open_in_this_process(needle="dwh.duckdb"):
 
 @pytest.fixture
 def warehouse(tmp_path):
-    """A private copy, so the test never touches the repo's own database."""
-    source = os.path.join(REPO_ROOT, "database", "dwh.duckdb")
-    if not os.path.exists(source):
-        pytest.skip("no warehouse to copy")
+    """A private copy of a warehouse dbt can actually build on.
+
+    dbt reads dlt's `_dlt_id` / `_dlt_load_id`, and the repo's own warehouse is
+    Bruin-shaped after the migration, so it is no longer a valid target. Prefer
+    the frozen baseline copy, which still holds dlt's `raw_*`, and skip when
+    neither candidate is dlt-shaped.
+    """
+    candidates = [
+        os.path.join(REPO_ROOT, "baseline", "dwh.duckdb"),
+        os.path.join(REPO_ROOT, "database", "dwh.duckdb"),
+    ]
+    source = next(
+        (c for c in candidates if os.path.exists(c) and _has_dlt_raw(c)), None
+    )
+    if source is None:
+        pytest.skip("no dlt-shaped warehouse to build on")
+
     target = tmp_path / "dwh.duckdb"
-    with open(source, "rb") as src, open(target, "wb") as dst:
-        while chunk := src.read(1024 * 1024):
-            dst.write(chunk)
+    shutil.copyfile(source, target)
+    wal = source + ".wal"
+    if os.path.exists(wal):
+        shutil.copyfile(wal, str(target) + ".wal")
     return target
 
 
@@ -81,7 +113,7 @@ def test_run_dbt_holds_no_lock_once_it_returns(app_utils, warehouse, monkeypatch
     )
 
 
-def test_dbt_is_invoked_out_of_process(app_utils):
+def test_dbt_is_invoked_out_of_process(app_utils, monkeypatch):
     """A subprocess takes the lock and gives it back; in-process does not."""
     import subprocess
 
@@ -91,11 +123,14 @@ def test_dbt_is_invoked_out_of_process(app_utils):
         seen["command"] = command
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
-    app_utils.subprocess.run = fake_run
-    try:
-        app_utils.run_dbt(["deps"])
-    finally:
-        del app_utils.subprocess.run
+    # monkeypatch, not a manual set/del: `app_utils.subprocess` IS the subprocess
+    # module, so `del app_utils.subprocess.run` removed subprocess.run for the
+    # rest of the session. Any later import that shells out (dlt -> croniter ->
+    # platform.architecture -> subprocess.check_output) then died with
+    # "NameError: name 'run' is not defined".
+    monkeypatch.setattr(app_utils.subprocess, "run", fake_run)
+
+    app_utils.run_dbt(["deps"])
 
     command = seen["command"]
     assert command[0].endswith("dbt"), command

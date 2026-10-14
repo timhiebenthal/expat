@@ -5,43 +5,33 @@ joins it against clean__config_jobs. The model is asked for that string, and
 asking is not enough: it returned "Staff Analytics Engineer, 10 years" for a
 configured "Analytics Engineer", so the join matched nothing and every city
 vanished from job_earnings with no error anywhere.
-"""
 
-import os
-import sys
+The logic under test lives in `pipeline/lib/earnings.py`; `loading/llm_earnings.py`
+stays as the dlt-era caller until cutover.
+"""
 
 import pytest
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOADING = os.path.join(REPO_ROOT, "loading")
-
 
 @pytest.fixture(scope="module")
-def llm_earnings():
-    os.environ.setdefault(
-        "DUCKDB_LOCATION", os.path.join(REPO_ROOT, "database/dwh.duckdb")
-    )
-    sys.path.insert(0, LOADING)
-    sys.path.insert(1, REPO_ROOT)
-    sys.modules.pop("utils", None)
-    sys.modules.pop("llm_earnings", None)
-    import llm_earnings as module
+def earnings():
+    import pipeline.lib.earnings as module
 
     return module
 
 
-def test_job_string_is_built_not_asked_for(llm_earnings):
+def test_job_string_is_built_not_asked_for(earnings):
     assert (
-        llm_earnings.build_job_string("Analytics Engineer", 10)
+        earnings.build_job_string("Analytics Engineer", 10)
         == "Analytics Engineer with 10 years of experience"
     )
     assert (
-        llm_earnings.build_job_string("Data Scientist", 5)
+        earnings.build_job_string("Data Scientist", 5)
         == "Data Scientist with 5 years of experience"
     )
 
 
-def test_job_string_parses_back_to_the_configured_title(llm_earnings):
+def test_job_string_parses_back_to_the_configured_title(earnings):
     """Runs prep__job_earnings' own expressions over the string we generate.
 
     If the two ever drift apart the join goes quiet again, so check the parse
@@ -49,7 +39,7 @@ def test_job_string_parses_back_to_the_configured_title(llm_earnings):
     """
     import duckdb
 
-    job_string = llm_earnings.build_job_string("Analytics Engineer", 10)
+    job_string = earnings.build_job_string("Analytics Engineer", 10)
     dwh = duckdb.connect()
 
     title = dwh.execute(
@@ -64,7 +54,7 @@ def test_job_string_parses_back_to_the_configured_title(llm_earnings):
     assert years == 10
 
 
-def test_a_reworded_title_from_the_model_is_overridden(llm_earnings):
+def test_a_reworded_title_from_the_model_is_overridden(earnings):
     """The regression: the model's own wording must never reach the warehouse."""
     from_model = [
         {
@@ -77,15 +67,15 @@ def test_a_reworded_title_from_the_model_is_overridden(llm_earnings):
         }
     ]
 
-    records = llm_earnings.attach_job_string(from_model, "Analytics Engineer", 10)
+    records = earnings.attach_job_string(from_model, "Analytics Engineer", 10)
 
     assert records[0]["jobtitle_and_experience"] == (
         "Analytics Engineer with 10 years of experience"
     )
 
 
-def test_records_carry_every_key_the_dwh_expects(llm_earnings):
-    records = llm_earnings.attach_job_string(
+def test_records_carry_every_key_the_dwh_expects(earnings):
+    records = earnings.attach_job_string(
         [{"city": "Munich", "country": "Germany", "currency": "EUR"}],
         "Analytics Engineer",
         10,
@@ -99,19 +89,42 @@ def test_records_carry_every_key_the_dwh_expects(llm_earnings):
     ]
 
 
-def test_a_missing_city_fails_loudly(llm_earnings):
+def test_a_missing_city_fails_loudly(earnings):
     cities = [
         {"city": "Munich", "country": "Germany", "currency": "EUR"},
         {"city": "London", "country": "United Kingdom", "currency": "GBP"},
     ]
 
     with pytest.raises(RuntimeError, match="Athens"):
-        llm_earnings.assert_every_city_came_back(
-            cities, ["Munich", "London", "Athens"]
-        )
+        earnings.assert_every_city_came_back(cities, ["Munich", "London", "Athens"])
 
 
-def test_city_matching_ignores_case_and_padding(llm_earnings):
+def test_city_matching_ignores_case_and_padding(earnings):
     cities = [{"city": " munich ", "country": "Germany", "currency": "EUR"}]
 
-    llm_earnings.assert_every_city_came_back(cities, ["Munich"])
+    earnings.assert_every_city_came_back(cities, ["Munich"])
+
+
+def test_the_earnings_call_is_injected(earnings):
+    """No live model here: the caller supplies the callable that hits the LLM."""
+    seen = {}
+
+    def fake_invoke(prompt):
+        seen["prompt"] = prompt
+        return [
+            {
+                "city": "Munich",
+                "country": "Germany",
+                "currency": "EUR",
+                "jobtitle_and_experience": "Staff Analytics Engineer, 10 years",
+                "average_monthly_gross_salary": 8000.0,
+                "net_to_gross_salary_ratio": 0.62,
+            }
+        ]
+
+    rows = earnings.retrieve_city_earnings(
+        ["Munich"], "Analytics Engineer with 10 years of experience", fake_invoke
+    )
+
+    assert rows[0]["city"] == "Munich"
+    assert "Analytics Engineer with 10 years of experience" in seen["prompt"]

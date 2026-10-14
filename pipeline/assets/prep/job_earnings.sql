@@ -1,0 +1,73 @@
+/* @bruin
+name: analytics.prep__job_earnings
+type: duckdb.sql
+connection: duckdb-default
+
+materialization:
+  type: table
+  strategy: create+replace
+
+depends:
+  - analytics.clean__job_earnings
+  - analytics.clean__config_jobs
+
+tags:
+  - layer:transform
+  - layer:prep
+
+custom_checks:
+  # assert_all_configured_jobs_have_earnings. The check sits on prep because prep
+  # is the join that drops a job: it matches on parsed title AND experience, so a
+  # job with no earnings disappears on its own while the others keep the cities.
+  - name: every configured job has earnings
+    query: |
+      select count(*)
+      from analytics.clean__config_jobs as config
+      where not exists (
+          select 1
+          from analytics.prep__job_earnings as earnings
+          where earnings.job_title = config.job_title
+            and earnings.job_experience = config.job_experience
+      )
+    value: 0
+@bruin */
+
+-- The join is on job title AND experience. Dropping either side of it is what
+-- silently removed every row for a job before, so both stay.
+with
+    clean_job as (
+        select
+            city_name,
+            country_name,
+            case
+                when jobtitle_and_experience like '% with %'
+                    then split_part(jobtitle_and_experience, ' with ', 1)
+                when regexp_full_match(jobtitle_and_experience, '.*, \d+ years')
+                    then split_part(jobtitle_and_experience, ', ', 1)
+            end as job_title,
+            try_cast(
+                case
+                    when jobtitle_and_experience like '% with %'
+                        then regexp_extract(
+                            split_part(jobtitle_and_experience, ' with ', 2), '(\d+)'
+                        )
+                    when regexp_full_match(jobtitle_and_experience, '.*, \d+ years')
+                        then regexp_extract(jobtitle_and_experience, '(\d+)')
+                end as int
+            ) as job_experience,
+            local_currency,
+            avg_monthly_gross_salary,
+            net_to_gross_salary_ratio
+        from analytics.clean__job_earnings
+    ),
+
+    filter_for_jobs_with_data as (
+        select clean_job.*
+        from clean_job
+        inner join analytics.clean__config_jobs as config
+            on clean_job.job_title = config.job_title
+            and clean_job.job_experience = config.job_experience
+    )
+
+select *
+from filter_for_jobs_with_data

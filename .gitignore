@@ -7,3 +7,15 @@ dbt/package-lock.yml
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Frozen parity baseline: the warehouse copy plus its capture manifest. Never
+# commit it - it is a snapshot, not source.
+baseline/
+
+# Appended by `bruin run` (it re-adds any of these that are missing). Bruin
+# ignores .bruin.yml by convention, but we commit it: it holds only the
+# ${DUCKDB_LOCATION} placeholder, no secrets, and the container build needs it.
+logs/runs
+logs/*.log
+*.py[cod]
+.bruin.yml
