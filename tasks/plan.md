@@ -61,11 +61,11 @@ Consequence for ordering: `core__cost_of_living` needs currency and FX rates, so
 
 ### Phase 2: Forex and earnings paths (app-visible: `core__job_earnings`)
 - [x] Task 6 `[ingest]` Forex path end to end
-- [ ] Task 7 `[ingest]` Earnings path end to end
+- [x] Task 7 `[ingest]` Earnings path end to end
 
 ### Checkpoint C
-- [ ] `core__job_earnings` matches the baseline exactly
-- [ ] Forex and earnings Raw tables match the baseline's shape
+- [x] `core__job_earnings` matches the baseline exactly
+- [x] Forex and earnings Raw tables have the grain the entity tables expect (column parity is not required)
 
 ### Phase 3: Cost path (app-visible: `core__cost_of_living`, `core__activity`)
 - [ ] Task 8 `[ingest]` Numbeo path end to end, flattened

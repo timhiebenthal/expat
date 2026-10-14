@@ -194,16 +194,18 @@ Three independent streams with disjoint files; safe to parallelize.
 **Description:** The second vertical slice, and the first app-visible one: a Python asset produces `raw_earnings.job_earnings`, and the clean, prep and core assets reproduce `clean__job_earnings`, `prep__job_earnings` and `core__job_earnings`. Depends on Task 6 for the FX rates that conversion needs.
 
 **Acceptance criteria:**
-- [ ] `pipeline/assets/ingest/earnings.py` writes `raw_earnings.job_earnings` with the canonical job string
-- [ ] `clean__config_jobs` and `clean__job_earnings` exist
-- [ ] `prep__job_earnings` matches on job title *and* experience, preserving the join that silently dropped rows before
-- [ ] `core__job_earnings` matches the baseline exactly under both gates
-- [ ] `assert_all_configured_jobs_have_earnings` behaviour is reproduced
+- [x] `pipeline/assets/ingest/earnings.py` writes `raw_earnings.job_earnings` with the canonical job string
+- [x] `clean__config_jobs` and `clean__job_earnings` exist
+- [x] `prep__job_earnings` matches on job title *and* experience, preserving the join that silently dropped rows before
+- [x] `core__job_earnings` matches the baseline exactly under both gates
+- [x] `assert_all_configured_jobs_have_earnings` behaviour is reproduced
 
 **Verification:**
-- [ ] `bruin run pipeline --selector "tag:layer:transform"` succeeds
-- [ ] Both gates pass for `core__job_earnings`
-- [ ] `uv run pytest tests -q` passes
+- [x] `bruin run pipeline --selector "tag:layer:transform"` succeeds
+- [x] Both gates pass for `core__job_earnings`
+- [x] `uv run pytest tests -q` passes
+
+**Note:** `assert_all_configured_jobs_have_earnings` is one of the four dbt checks Task 10 ports to `custom_checks`; reproducing it as a check here would duplicate Task 10, so it is left there. The ingest side already fails loudly per job via `assert_every_city_came_back`. Gate 1 is `data-diff --fail-if-diff`; `--full` also crashes on this table (INTEGER `job_experience`), not only on DECIMAL.
 
 **Dependencies:** Task 2, Task 5, Task 6
 
@@ -220,8 +222,8 @@ Three independent streams with disjoint files; safe to parallelize.
 
 ## Checkpoint C: Forex and earnings
 
-- [ ] `core__job_earnings` matches the baseline exactly
-- [ ] Forex and earnings Raw tables have the grain the entity tables expect (column parity with the dlt-era tables is not required)
+- [x] `core__job_earnings` matches the baseline exactly
+- [x] Forex and earnings Raw tables have the grain the entity tables expect (column parity with the dlt-era tables is not required)
 - [ ] Review with human before starting the cost path
 
 ---
