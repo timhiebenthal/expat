@@ -1,0 +1,19 @@
+# Runs the repo's own test command before every commit. Before this file, nothing
+# ran `uv run pytest` except a human (or agent) remembering to: there is no CI
+# workflow in this repo.
+#
+# The hook is `language: system` so it uses the project's own virtualenv through
+# `uv run`, rather than an isolated pre-commit env without the project's deps.
+#
+# The explicit PATH is load-bearing: the hook inherits the PATH of whatever
+# process ran `git commit`, and a non-interactive bash session has no
+# ~/.local/bin, so a bare `uv` is "Executable not found" there.
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: bash -c 'export PATH="$HOME/.local/bin:$PATH"; exec uv run pytest tests -q'
+        language: system
+        pass_filenames: false
+        always_run: true
