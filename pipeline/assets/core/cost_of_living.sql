@@ -38,6 +38,9 @@ custom_checks:
 @bruin */
 -- Port of the dbt model, minus dlt's city_id (unread by the app, and no longer
 -- produced now that numbeo is flat). category_slug inlines the slugify macro.
+-- The one deliberate divergence from dbt is the operator: conversion_rate is
+-- EUR per unit of local currency, so it is multiplied in, not divided. See
+-- core__job_earnings.
 with
     cities as (
         select
@@ -56,9 +59,9 @@ with
     convert_currency as (
         select
             cities.*,
-            round(cities.cost_value / forex.conversion_rate, 2) as cost_eur,
+            round(cities.cost_value * forex.conversion_rate, 2) as cost_eur,
             round(
-                cities.monthly_activity_cost / forex.conversion_rate, 2
+                cities.monthly_activity_cost * forex.conversion_rate, 2
             ) as monthly_activity_cost_eur,
             regexp_replace(
                 regexp_replace(

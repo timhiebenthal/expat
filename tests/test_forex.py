@@ -3,7 +3,7 @@
 Two things used to go wrong here and both were silent:
 
 - the ticker ran in the wrong direction, so the GBP rate was the reciprocal of
-  the one the dbt models assume (they divide by it to reach EUR)
+  the one the models need (they multiply by it to reach EUR)
 - a currency that yahoo refused to serve was dropped from the table, and dbt
   then dropped the cities that used it
 
@@ -25,8 +25,9 @@ def forex():
 def test_ticker_quotes_the_foreign_currency_in_the_base(forex):
     """from_currency=GBP, to_currency=EUR needs GBPEUR=X, not EURGBP=X.
 
-    EURGBP=X quotes GBP in EUR - the reciprocal - and dividing a GBP salary by
-    it produces numbers that are wrong by the square of the real rate.
+    GBPEUR=X is the EUR value of one pound, which the core models multiply a GBP
+    salary by. EURGBP=X is the reciprocal and would invert every amount, leaving
+    a GBP salary wrong by the square of the real rate.
     """
     assert forex.build_ticker("EUR", "GBP") == "GBPEUR=X"
     assert forex.build_ticker("EUR", "JPY") == "JPYEUR=X"

@@ -34,10 +34,11 @@ EUR_ROW = {
 def build_ticker(base_currency, foreign_currency):
     """Yahoo's <from><to>=X ticker quotes one <to> in <from>.
 
-    The rows are stored as from_currency=<foreign>, to_currency=<base> and the
-    dbt models divide by conversion_rate to reach EUR, so the ticker has to run
-    in that same direction. 'EURGBP=X' quotes GBP in EUR - the reverse - and fed
-    a rate that was wrong by the square of the real one.
+    The rows are stored as from_currency=<foreign>, to_currency=<base>, so this
+    returns '<foreign><base>=X', whose close is <base> per one <foreign> - for
+    GBP, GBPEUR=X, the EUR value of one pound. The core models multiply by it to
+    reach EUR. 'EURGBP=X' is the reciprocal and would invert every amount
+    (wrong by the square of the real rate).
     """
     return f"{foreign_currency}{base_currency}=X"
 
