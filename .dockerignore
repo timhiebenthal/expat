@@ -3,3 +3,7 @@
 .env
 *.pyc
 __pycache__
+.pytest_cache
+# A host .venv would otherwise be copied over the image venv built by uv sync.
+# The two are built against different Pythons, so the result imports nothing.
+.venv

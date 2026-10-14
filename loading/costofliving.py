@@ -18,25 +18,41 @@ logging.basicConfig(
 )
 
 
+def parse_table_rows(table):
+    """Extract category/cost pairs from a numbeo cost-of-living table.
+
+    numbeo pads the table with spacer rows carrying fewer than two cells, so
+    cells[1] cannot be indexed unconditionally - doing so raises IndexError and
+    aborts the whole loading pipeline on the first city.
+    """
+    if table is None:
+        return []
+
+    rows = []
+    for row in table.find_all("tr"):
+        cells = row.find_all("td")
+        if len(cells) < 2:
+            continue
+        rows.append(
+            {
+                "category": cells[0].text.strip(),
+                "cost": cells[1].text.strip().replace("\xa0", ""),
+            }
+        )
+    return rows
+
+
 def get_city_data(city):
     url = f"https://www.numbeo.com/cost-of-living/in/{city}"
-    response = requests.get(url)
+    response = requests.get(url, timeout=30)
     soup = BeautifulSoup(response.content, "html.parser")
     table = soup.find("table", class_="data_wide_table new_bar_table")
 
-    if table is None:
+    table_data = parse_table_rows(table)
+    if not table_data:
         return None
-    else:
-        # Extract the data from the table rows
-        table_data = []
-        for row in table.find_all("tr"):
-            cells = row.find_all("td")
-            if cells:
-                category = cells[0].text.strip()
-                cost = cells[1].text.strip().replace("\xa0", "")
-                table_data.append({"category": category, "cost": cost})
 
-        return [{"city": city, "data": table_data}]
+    return [{"city": city, "data": table_data}]
 
 
 def load_data(data):
