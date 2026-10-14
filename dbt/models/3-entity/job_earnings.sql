@@ -8,13 +8,12 @@ with
             }} as entity_id,
             earnings.*,
             round(
-                earnings.avg_monthly_gross_salary
-                / coalesce(forex.conversion_rate, 1.00),
+                earnings.avg_monthly_gross_salary / forex.conversion_rate,
                 2
             ) as avg_monthly_gross_salary_eur,
             round(
                 (earnings.avg_monthly_gross_salary * earnings.net_to_gross_salary_ratio)
-                / coalesce(forex.conversion_rate, 1.00),
+                / forex.conversion_rate,
                 2
             ) as avg_monthly_net_salary_eur,
             printf(
@@ -24,7 +23,6 @@ with
         left join
             {{ ref("prep__avg_forex_rate") }} as forex
             on earnings.local_currency = forex.from_currency
-        where forex.conversion_rate is not null or earnings.local_currency = 'EUR'  -- hardcoded base currency for now.
     )
 
 select *

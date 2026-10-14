@@ -16,7 +16,6 @@ dependencies = [
     # dlt imports tqdm without declaring it. It used to arrive via
     # shandy-sqlfmt, now a dev dependency, so declare it explicitly.
     "tqdm",
-
     # --- everything else: major-version ceiling only. ---
     # uv.lock holds the exact versions, so these are not pins in the usual
     # sense - they exist to stop `uv lock --upgrade` from crossing a breaking
@@ -27,7 +26,7 @@ dependencies = [
     "dlt<2",
     "dbt-core<2",
     "dbt-duckdb<2",
-    "yfinance",
+    "yfinance>=0.2.65",
     "langchain",
     "langchain-openai",
     "python-dotenv",
