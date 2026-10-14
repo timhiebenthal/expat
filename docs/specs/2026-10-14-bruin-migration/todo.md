@@ -67,7 +67,7 @@ Plan: `tasks/plan.md` | Contract: `SPEC.md` | Module ids: `oracle` `ingest` `tra
 - [x] Baseline captured, verified, and absent from git
 - [x] `bruin validate` and `bruin run` both succeed against the baseline copy
 - [x] The unset-`DUCKDB_LOCATION` failure mode has been seen, not merely read about
-- [ ] Review with human before porting models
+- [x] Review with human before porting models
 
 ---
 
@@ -224,7 +224,7 @@ Three independent streams with disjoint files; safe to parallelize.
 
 - [x] `core__job_earnings` matches the baseline exactly
 - [x] Forex and earnings Raw tables have the grain the entity tables expect (column parity with the dlt-era tables is not required)
-- [ ] Review with human before starting the cost path
+- [x] Review with human before starting the cost path
 
 ---
 
@@ -291,7 +291,7 @@ Three independent streams with disjoint files; safe to parallelize.
 
 - [x] Every table the app reads matches the baseline exactly
 - [x] Both parity gates pass for all of them
-- [ ] Review with human before touching quality
+- [x] Review with human before touching quality
 
 ---
 
