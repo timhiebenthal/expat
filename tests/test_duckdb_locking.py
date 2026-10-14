@@ -81,7 +81,7 @@ def test_run_dbt_holds_no_lock_once_it_returns(app_utils, warehouse, monkeypatch
     )
 
 
-def test_dbt_is_invoked_out_of_process(app_utils):
+def test_dbt_is_invoked_out_of_process(app_utils, monkeypatch):
     """A subprocess takes the lock and gives it back; in-process does not."""
     import subprocess
 
@@ -91,11 +91,14 @@ def test_dbt_is_invoked_out_of_process(app_utils):
         seen["command"] = command
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
-    app_utils.subprocess.run = fake_run
-    try:
-        app_utils.run_dbt(["deps"])
-    finally:
-        del app_utils.subprocess.run
+    # monkeypatch, not a manual set/del: `app_utils.subprocess` IS the subprocess
+    # module, so `del app_utils.subprocess.run` removed subprocess.run for the
+    # rest of the session. Any later import that shells out (dlt -> croniter ->
+    # platform.architecture -> subprocess.check_output) then died with
+    # "NameError: name 'run' is not defined".
+    monkeypatch.setattr(app_utils.subprocess, "run", fake_run)
+
+    app_utils.run_dbt(["deps"])
 
     command = seen["command"]
     assert command[0].endswith("dbt"), command
