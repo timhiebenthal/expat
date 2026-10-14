@@ -4,6 +4,12 @@ install_requirements:
 test:
 	uv run pytest tests -v
 
+# The formatter was declared as a dev dependency but nothing ran it: it was only
+# reachable from a VS Code extension. Scoped to pipeline/ (the live SQL); dbt/ is
+# dead until cutover.
+fmt:
+	uv run sqlfmt pipeline
+
 run_tests_docker:
 	docker build -t local_image \
 		--build-arg APP_UID=$(shell id -u) --build-arg APP_GID=$(shell id -g) . \
