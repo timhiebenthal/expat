@@ -145,6 +145,6 @@ if st.button("Submit Cities", disabled=st.session_state.city_suggestions is None
 
     success = utils.run_pipeline()
     if success:
-        st.switch_page(f"/app/streamlit/pages/Comparison.py")
+        st.switch_page("pages/Comparison.py")
     else:
         st.error("Something went wrong. Please check the logs for more information.")

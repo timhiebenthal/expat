@@ -1,6 +1,8 @@
 import altair as alt
 import logging
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import streamlit as st
@@ -21,7 +23,12 @@ def define_database_location():
     used as-is.
     """
     location = Path(os.environ.get("DUCKDB_LOCATION", "database/dwh.duckdb"))
-    return str(location if location.is_absolute() else REPO_ROOT / location)
+    resolved = str(location if location.is_absolute() else REPO_ROOT / location)
+    # dbt reads DUCKDB_LOCATION through env_var() and resolves a relative path
+    # against its own working directory, and the loaders run as subprocesses,
+    # so normalise it to an absolute path once, here.
+    os.environ["DUCKDB_LOCATION"] = resolved
+    return resolved
 
 
 DATABASE_LOCATION = define_database_location()
@@ -63,11 +70,17 @@ def load_config():
         type: dict
     """
     import duckdb
-    import os
 
+    # DuckDB allows a single writer per file, so the connection has to be
+    # released before anything else - the loaders and dbt - can open it. The app
+    # is long-lived, so leaving this to garbage collection keeps the write lock
+    # for as long as the process lives.
     dwh = duckdb.connect(DATABASE_LOCATION)
-    cities = dwh.table("raw_config.cities").df()["name"].tolist()
-    jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+    try:
+        cities = dwh.table("raw_config.cities").df()["name"].tolist()
+        jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+    finally:
+        dwh.close()
 
     return {
         "cities": cities,
@@ -104,10 +117,15 @@ def save_config_to_duckdb(city_df, jobs_df):
     )
     # upload tables to DuckDB
     dwh = duckdb.connect(DATABASE_LOCATION)
-    dwh.sql("CREATE SCHEMA IF NOT EXISTS raw_config")
-    dwh.sql("CREATE OR REPLACE TABLE raw_config.cities AS SELECT * FROM city_df")
-    dwh.sql("CREATE OR REPLACE TABLE raw_config.jobs AS SELECT * FROM jobs_df")
-    logging.info("Tables for jobs and cities uploaded to DuckDB\n")
+    try:
+        dwh.sql("CREATE SCHEMA IF NOT EXISTS raw_config")
+        dwh.sql("CREATE OR REPLACE TABLE raw_config.cities AS SELECT * FROM city_df")
+        dwh.sql("CREATE OR REPLACE TABLE raw_config.jobs AS SELECT * FROM jobs_df")
+        logging.info("Tables for jobs and cities uploaded to DuckDB\n")
+    finally:
+        # Released here on purpose: run_pipeline() is called straight after this
+        # and its loaders are separate processes that need the write lock.
+        dwh.close()
 
 
 def editable_df_component(dict, object_name, expander=False):
@@ -142,51 +160,83 @@ def editable_df_component(dict, object_name, expander=False):
         )
 
 
+def dbt_executable():
+    """The dbt that belongs to this interpreter's virtualenv."""
+    candidate = Path(sys.executable).with_name("dbt")
+    return str(candidate) if candidate.exists() else "dbt"
+
+
+def run_dbt(args):
+    """Run dbt in its own process, and return whether it succeeded.
+
+    Deliberately not dbtRunner().invoke(): dbt-duckdb keeps its DuckDB handle
+    open for the life of the process it runs in, and closing the runner does not
+    release it - the handle survives even del + gc.collect(). Streamlit is
+    long-lived, so an in-process run pins the write lock on the warehouse and
+    everything after it dies with
+
+        IOException: Could not set lock on file ... Conflicting lock is held in
+        ... (PID <the streamlit process>)
+
+    A subprocess takes the lock and drops it when it exits.
+    """
+    dbt_dir = str(REPO_ROOT / "dbt")
+    command = [
+        dbt_executable(),
+        *args,
+        "--profiles-dir",
+        dbt_dir,
+        "--project-dir",
+        dbt_dir,
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+    return result.returncode == 0
+
+
 def run_pipeline():
-    import subprocess
     import time
-    from dbt.cli.main import dbtRunner, dbtRunnerResult
 
     print("\n>>>> Running pipeline ...\n")
 
+    # Paths are derived from the repo root, never hardcoded: the same code runs
+    # from the host (make streamlit_app) and from /app inside the container.
+    loaders = [
+        ("Retrieve earnings data from LLM model ...", "llm_earnings.py"),
+        ("Retrieve cost of living data from numbeo.com ...", "costofliving.py"),
+        ("Retrieve forex data from Yahoo finance ...", "forex.py"),
+    ]
+
     with st.status("Preparing your comparsion ...", expanded=True) as status:
-        st.write("Retrieve earnings data from LLM model ...")
-        subprocess.run(["python", "/app/loading/llm_earnings.py"])
-        time.sleep(1)
-
-        st.write("Retrieve cost of living data from numbeo.com ...")
-        subprocess.run(["python", "/app/loading/costofliving.py"])
-        time.sleep(1)
-
-        st.write("Retrieve forex data from Yahoo finance ...")
-        subprocess.run(["python", "/app/loading/forex.py"])
-        time.sleep(1)
+        for label, script in loaders:
+            st.write(label)
+            # sys.executable rather than "python": the app already runs inside
+            # the project venv, and that is the interpreter with the loaders'
+            # dependencies on its path.
+            result = subprocess.run(
+                [sys.executable, str(REPO_ROOT / "loading" / script)],
+                capture_output=True,
+                text=True,
+            )
+            print(result.stdout)
+            print(result.stderr)
+            if result.returncode != 0:
+                # A failing loader used to be swallowed, so the run carried on
+                # and reported success while nothing had been loaded.
+                st.error(f"{script} failed with exit code {result.returncode}.")
+                status.update(label="Pipeline failed", state="error", expanded=True)
+                return False
+            time.sleep(1)
 
         st.write("Run dbt pipeline ...")
-        dbt = dbtRunner()
-        deps_cli_args = [
-            "deps",
-            "--profiles-dir",
-            "./dbt",
-            "--project-dir",
-            "./dbt",
-        ]
-        run_cli_args = [
-            "build",
-            "--target",
-            "prod",
-            "--profiles-dir",
-            "/app/dbt",
-            "--project-dir",
-            "/app/dbt",
-        ]
+        if not run_dbt(["deps"]):
+            st.error("dbt deps failed! Please check the logs.")
+            status.update(label="Pipeline failed", state="error", expanded=True)
+            return False
+        print(">>>>>>>>>>>> dbt deps installed.")
 
-        dbtDepsResult = dbt.invoke(deps_cli_args)
-        if dbtDepsResult.success:
-            print(">>>>>>>>>>>> dbt deps installed.")
-
-        dbtRunnerResult = dbt.invoke(run_cli_args)
-        if dbtRunnerResult.success:
+        if run_dbt(["build", "--target", "prod"]):
             print(">>>>>>>>>>>> dbt run successful.")
 
             status.update(label="Pipeline complete!", state="complete", expanded=False)
@@ -196,4 +246,5 @@ def run_pipeline():
             return True
         else:
             st.error("dbt run failed! Please check the logs.")
+            status.update(label="Pipeline failed", state="error", expanded=True)
             return False

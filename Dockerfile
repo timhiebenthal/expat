@@ -35,12 +35,17 @@ RUN python -c "import pandas, duckdb, streamlit, pyarrow, numpy"
 # Add build argument for development mode
 ARG DEVELOPMENT_MODE=false
 
-# Conditional user setup for development
-RUN if [ "$DEVELOPMENT_MODE" = "true" ]; then \
-        groupadd --gid 1000 vscode && \
-        useradd --uid 1000 --gid 1000 -m vscode && \
-        chown -R vscode:vscode /app; \
-    fi
+# Run as an ordinary user, not root.
+#
+# The container writes database/dwh.duckdb through the ./database bind mount, so
+# a root process leaves the warehouse owned by root:root on the host and the next
+# `make streamlit_app` fails with "Permission denied". Matching the host uid keeps
+# every file the container creates writable by the host user.
+ARG APP_UID=1000
+ARG APP_GID=1000
+RUN groupadd --gid ${APP_GID} app \
+    && useradd --uid ${APP_UID} --gid ${APP_GID} -m app \
+    && chown -R ${APP_UID}:${APP_GID} /app
 
 # Expose port 8080 for Cloud Run (and 8501 for local Streamlit)
 EXPOSE 8080 8501
@@ -48,4 +53,9 @@ EXPOSE 8080 8501
 # Use an entrypoint script to determine how to run the app
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Drop root only once every build step that needs it is done, so the image's own
+# files stay root-owned and only runtime writes land as the app user.
+USER app
+
 ENTRYPOINT ["/entrypoint.sh"]
