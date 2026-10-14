@@ -37,7 +37,6 @@ custom_checks:
       where city_name not in (select city_name from analytics.core__job_earnings)
     value: 0
 @bruin */
-
 -- entity_id reproduces dbt_utils.generate_surrogate_key exactly: md5 over the
 -- pipe-joined, null-coalesced, cast-to-TEXT fields. It is checked against the
 -- baseline, so the expression is copied from the compiled dbt SQL rather than
@@ -47,12 +46,15 @@ with
         select
             md5(
                 cast(
-                    coalesce(cast(city_name as TEXT), '_dbt_utils_surrogate_key_null_')
+                    coalesce(cast(city_name as text), '_dbt_utils_surrogate_key_null_')
                     || '-'
-                    || coalesce(cast(job_title as TEXT), '_dbt_utils_surrogate_key_null_')
+                    || coalesce(
+                        cast(job_title as text), '_dbt_utils_surrogate_key_null_'
+                    )
                     || '-'
-                    || coalesce(cast(job_experience as TEXT), '_dbt_utils_surrogate_key_null_')
-                    as TEXT
+                    || coalesce(
+                        cast(job_experience as text), '_dbt_utils_surrogate_key_null_'
+                    ) as text
                 )
             ) as entity_id,
             earnings.*,
@@ -64,10 +66,12 @@ with
                 / forex.conversion_rate,
                 2
             ) as avg_monthly_net_salary_eur,
-            printf('%s (%d years)', job_title, job_experience)
-                as job_title_experience_short
+            printf(
+                '%s (%d years)', job_title, job_experience
+            ) as job_title_experience_short
         from analytics.prep__job_earnings as earnings
-        left join analytics.prep__avg_forex_rate as forex
+        left join
+            analytics.prep__avg_forex_rate as forex
             on earnings.local_currency = forex.from_currency
     )
 

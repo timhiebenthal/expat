@@ -36,7 +36,6 @@ custom_checks:
       where city_name not in (select city_name from analytics.core__cost_of_living)
     value: 0
 @bruin */
-
 -- Port of the dbt model, minus dlt's city_id (unread by the app, and no longer
 -- produced now that numbeo is flat). category_slug inlines the slugify macro.
 with
@@ -58,8 +57,9 @@ with
         select
             cities.*,
             round(cities.cost_value / forex.conversion_rate, 2) as cost_eur,
-            round(cities.monthly_activity_cost / forex.conversion_rate, 2)
-                as monthly_activity_cost_eur,
+            round(
+                cities.monthly_activity_cost / forex.conversion_rate, 2
+            ) as monthly_activity_cost_eur,
             regexp_replace(
                 regexp_replace(
                     regexp_replace(
@@ -74,7 +74,8 @@ with
                 '_'
             ) as category_slug
         from cities
-        left join analytics.prep__avg_forex_rate as forex
+        left join
+            analytics.prep__avg_forex_rate as forex
             on cities.local_currency = forex.from_currency
     )
 

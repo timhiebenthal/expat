@@ -1,0 +1,28 @@
+# Runs the repo's own checks before every commit: the test suite, and the SQL
+# formatter. Before this file nothing ran either of them unless a human (or
+# agent) remembered to, and there is no CI workflow in this repo.
+#
+# Both hooks are `language: system` so they use the project's own virtualenv
+# through `uv run`, rather than an isolated pre-commit env without the project's
+# deps.
+#
+# The explicit PATH is load-bearing: a hook inherits the PATH of whatever process
+# ran `git commit`, and a non-interactive bash session has no ~/.local/bin, so a
+# bare `uv` is "Executable not found" there.
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: bash -c 'export PATH="$HOME/.local/bin:$PATH"; exec uv run pytest tests -q'
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: sqlfmt
+        name: sqlfmt
+        # Formats in place and fails the commit, so the next commit carries the
+        # formatter's output. `make fmt` runs the same command by hand.
+        entry: bash -c 'export PATH="$HOME/.local/bin:$PATH"; exec uv run sqlfmt pipeline'
+        language: system
+        pass_filenames: false
+        always_run: true
