@@ -1,0 +1,25 @@
+name: analytics.seed_activity_mapping
+type: duckdb.seed
+connection: duckdb-default
+
+# Tagged layer:transform on purpose. A selector does not drag in upstreams, so
+# unless the seed is selected the transform-only parity run leaves prep without
+# its mapping table.
+tags:
+  - layer:transform
+  - layer:seed
+
+parameters:
+  path: seed_activity_mapping.csv
+
+# The CSV is fully quoted, so the loader infers text for every column; these
+# declarations give activity_count its real type.
+columns:
+  - name: category
+    type: varchar
+  - name: activity
+    type: varchar
+  - name: activity_type
+    type: varchar
+  - name: activity_count
+    type: integer
