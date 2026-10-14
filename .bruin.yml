@@ -1,0 +1,13 @@
+# Must sit at the repo root: Bruin resolves it from the git root, and a copy
+# next to `pipeline/` is silently ignored unless --config-file is passed.
+#
+# The path is deliberately the literal "${DUCKDB_LOCATION}" placeholder. Bruin
+# interpolates it from the environment, and an UNSET variable is left as the
+# literal string with no error - which is why every command exports it first.
+default_environment: default
+environments:
+  default:
+    connections:
+      duckdb:
+        - name: duckdb-default
+          path: "${DUCKDB_LOCATION}"

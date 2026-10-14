@@ -1,0 +1,4 @@
+name: expat
+
+default_connections:
+  duckdb: "duckdb-default"
