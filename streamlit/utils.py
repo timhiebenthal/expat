@@ -3,7 +3,6 @@ import logging
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import streamlit as st
@@ -25,9 +24,9 @@ def define_database_location():
     """
     location = Path(os.environ.get("DUCKDB_LOCATION", "database/dwh.duckdb"))
     resolved = str(location if location.is_absolute() else REPO_ROOT / location)
-    # dbt reads DUCKDB_LOCATION through env_var() and resolves a relative path
-    # against its own working directory, and the loaders run as subprocesses,
-    # so normalise it to an absolute path once, here.
+    # Bruin reads DUCKDB_LOCATION through .bruin.yml and resolves a relative path
+    # against its own working directory, and it runs as a subprocess, so
+    # normalise it to an absolute path once, here.
     os.environ["DUCKDB_LOCATION"] = resolved
     return resolved
 
@@ -73,7 +72,7 @@ def load_config():
     import duckdb
 
     # DuckDB allows a single writer per file, so the connection has to be
-    # released before anything else - the loaders and dbt - can open it. The app
+    # released before anything else - the Bruin pipeline - can open it. The app
     # is long-lived, so leaving this to garbage collection keeps the write lock
     # for as long as the process lives.
     dwh = duckdb.connect(DATABASE_LOCATION)
@@ -159,41 +158,6 @@ def editable_df_component(dict, object_name, expander=False):
             hide_index=True,
             # height=750
         )
-
-
-def dbt_executable():
-    """The dbt that belongs to this interpreter's virtualenv."""
-    candidate = Path(sys.executable).with_name("dbt")
-    return str(candidate) if candidate.exists() else "dbt"
-
-
-def run_dbt(args):
-    """Run dbt in its own process, and return whether it succeeded.
-
-    Deliberately not dbtRunner().invoke(): dbt-duckdb keeps its DuckDB handle
-    open for the life of the process it runs in, and closing the runner does not
-    release it - the handle survives even del + gc.collect(). Streamlit is
-    long-lived, so an in-process run pins the write lock on the warehouse and
-    everything after it dies with
-
-        IOException: Could not set lock on file ... Conflicting lock is held in
-        ... (PID <the streamlit process>)
-
-    A subprocess takes the lock and drops it when it exits.
-    """
-    dbt_dir = str(REPO_ROOT / "dbt")
-    command = [
-        dbt_executable(),
-        *args,
-        "--profiles-dir",
-        dbt_dir,
-        "--project-dir",
-        dbt_dir,
-    ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    print(result.stdout)
-    print(result.stderr)
-    return result.returncode == 0
 
 
 def bruin_executable():

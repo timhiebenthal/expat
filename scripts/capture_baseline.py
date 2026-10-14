@@ -5,6 +5,10 @@ step: once dlt stops writing ``raw_*``, the inputs cannot be reconstructed, so
 the warehouse is copied to ``baseline/dwh.duckdb`` and every dbt output is
 renamed to the name Bruin will produce, under a ``baseline.`` schema.
 
+Historical note: this script runs the final `dbt build`, and dbt was removed from
+the repo once the Bruin pipeline reached parity. It is kept as the record of how
+the frozen baseline was made; running it today would fail at that step.
+
 The copy is a *different file* from the one the app opens, which is the whole
 point: a writer holds an exclusive DuckDB lock, so parity runs cannot touch
 ``database/dwh.duckdb`` while the app is up.

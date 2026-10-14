@@ -1,7 +1,6 @@
 FROM python:3.11-slim
 
 # Set environment variables
-ENV DBT_PROFILES_DIR=/app/dbt/
 ENV DUCKDB_LOCATION=/app/database/dwh.duckdb
 
 # Set the working directory
@@ -22,6 +21,15 @@ RUN uv sync --frozen --no-dev
 
 ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+
+# The pinned Bruin CLI. It is a Go binary, not a PyPI package, so it is
+# curl-installed rather than coming from uv, and -b puts it in /usr/local/bin
+# where the non-root app user can execute it. Placed after the dependency layer
+# so a source change does not re-download it.
+RUN curl -LsSf https://getbruin.com/install/cli | sh -s -- -b /usr/local/bin v0.11.778
+# Fail the build rather than the first pipeline run if the CLI is not executable
+# by the user the image drops to later.
+RUN bruin version
 
 # Copy the rest of the application code
 COPY . .

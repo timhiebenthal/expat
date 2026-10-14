@@ -10,13 +10,11 @@ This reflects also in the choice of tooling: the pipeline isn't meant to scale t
 
 ### Different directories and their purpose
 
-- **loading**
-    contains python scripts to retrieve data and - mostly - load it into DuckDB
+- **pipeline**
+    contains the Bruin pipeline: Python ingest assets and SQL transform assets
 - **database**
     contains the DuckDB database(s)
-- **dbt**
-    contains the dbt-project for data transformations
-- **app**
+- **streamlit**
     contains the streamlit app acting as the UI for the end user
 <!-- - llm -->
 
