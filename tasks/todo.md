@@ -81,13 +81,15 @@ Three independent streams with disjoint files; safe to parallelize.
 
 **Acceptance criteria:**
 - [ ] `parse_table_rows`, `build_city_url` and `assert_every_city_came_back` live in `pipeline/lib/numbeo.py`
-- [ ] No module-level network calls; the fetch is a parameter or an injected dependency
-- [ ] Every existing assertion in `tests/test_costofliving.py` still passes, with imports re-pointed
-- [ ] `loading/costofliving.py` is left untouched and still imports (it is deleted at cutover, not now)
+- [x] No module-level network calls; the fetch is a parameter or an injected dependency
+- [x] Every existing assertion in `tests/test_costofliving.py` still passes, with imports re-pointed
+- [x] `loading/costofliving.py` is left untouched and still imports (it is deleted at cutover, not now)
 
 **Verification:**
-- [ ] `uv run pytest tests/test_costofliving.py -q` passes
-- [ ] `uv run pytest tests -q` passes in full
+- [x] `uv run pytest tests/test_costofliving.py -q` passes
+- [x] `uv run pytest tests -q` passes in full
+
+**Note:** `assert_every_city_came_back` does not exist in `loading/costofliving.py` - it lives in `loading/llm_earnings.py` and moves in Task 5. The numbeo completeness check is `dbt/tests/assert_all_cities_have_cost_of_living.sql`, ported in Task 10. `parse_table_rows` and `build_city_url` were extracted as-is; nothing was invented, to keep output unchanged.
 
 **Dependencies:** None
 
