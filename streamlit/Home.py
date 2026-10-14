@@ -5,9 +5,11 @@ import altair as alt
 import utils
 import sys
 from langchain_core.prompts import PromptTemplate
-from langchain_anthropic import ChatAnthropic
-from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from llm_client import build_chat_model, CitySuggestionList
+
 import pandas as pd
 import logging
 import time
@@ -38,20 +40,12 @@ if "jobs_df" not in st.session_state:
 
 
 def retrieve_city_suggestions(form_dict):
-    max_output_tokens = 1800
-    model = ChatAnthropic(
-        model="claude-3-5-sonnet-20240620",
-        temperature=0.2,
-        max_tokens=max_output_tokens,
-        timeout=None,
-        max_retries=2,
-    )
+    model = build_chat_model(temperature=0.2)
 
     logging.info(f"Retrieving suggestions on cities to live in from LLM model ... ")
 
     # prompt_input = find_cities(form_dict)
 
-    parser = JsonOutputParser()
     prompt = PromptTemplate.from_template(
         """
         Please help me out finding a new city to live in.
@@ -60,11 +54,12 @@ def retrieve_city_suggestions(form_dict):
         Other information which is important to me is: {criteria}
 
         Please list my current and favourite cities and up to 8 cities which fit my criteria.
-        The response should be purely a JSON Array, where each city is it's own object fitting these descriptions.
+        The response should be a JSON Array where each city is an object with the keys
+        "name", "country" and "description".
         """
     )
 
-    chain = prompt | model | parser
+    chain = prompt | model.with_structured_output(CitySuggestionList)
 
     response = chain.invoke(
         {
@@ -74,9 +69,11 @@ def retrieve_city_suggestions(form_dict):
         }
     )
 
-    logging.info(f"Retrieved data of {len(response)} cities.")
+    cities = [city.model_dump() for city in response.cities]
 
-    return response
+    logging.info(f"Retrieved data of {len(cities)} cities.")
+
+    return cities
 
 
 with st.form("inputs") as form_inputs:
@@ -113,7 +110,7 @@ with st.form("inputs") as form_inputs:
             "jobs": jobs_df_editable,
         }
 
-        with st.status("Asking Claude for suggestions ...") as status:
+        with st.status("Asking the model for suggestions ...") as status:
             st.session_state.city_suggestions = retrieve_city_suggestions(form_data)
             st.session_state.jobs_df = jobs_df_editable
             st.divider()
