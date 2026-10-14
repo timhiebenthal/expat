@@ -21,7 +21,11 @@ def define_database_location():
     used as-is.
     """
     location = Path(os.environ.get("DUCKDB_LOCATION", "database/dwh.duckdb"))
-    return str(location if location.is_absolute() else REPO_ROOT / location)
+    resolved = str(location if location.is_absolute() else REPO_ROOT / location)
+    # Normalise once so every consumer - dlt, dbt via env_var(), and the script
+    # that reads os.environ directly - agrees on the same absolute path.
+    os.environ["DUCKDB_LOCATION"] = resolved
+    return resolved
 
 
 DATABASE_LOCATION = define_database_location()
@@ -40,9 +44,14 @@ def load_config():
     """
     import duckdb
 
+    # Closed before returning: dlt opens its own connection to the same file a
+    # moment later, and DuckDB takes a single writer per database file.
     dwh = duckdb.connect(DATABASE_LOCATION)
-    cities = dwh.table("raw_config.cities").df()["name"].tolist()
-    jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+    try:
+        cities = dwh.table("raw_config.cities").df()["name"].tolist()
+        jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+    finally:
+        dwh.close()
 
     return {
         "cities": cities,

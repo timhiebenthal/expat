@@ -5,7 +5,9 @@ test:
 	uv run pytest tests -v
 
 run_tests_docker:
-	docker build -t local_image . && docker run --rm --env-file .env local_image uv run pytest tests -v
+	docker build -t local_image \
+		--build-arg APP_UID=$(shell id -u) --build-arg APP_GID=$(shell id -g) . \
+		&& docker run --rm --env-file .env local_image uv run pytest tests -v
 
 load_data:
 	uv run python loading/llm_earnings.py && uv run python loading/forex.py && uv run python loading/costofliving.py
@@ -23,8 +25,12 @@ init: load_data dbt_init dbt_run streamlit_app
 
 
 local_build:
-	docker build -t local_image .
+	docker build -t local_image \
+		--build-arg APP_UID=$(shell id -u) --build-arg APP_GID=$(shell id -g) .
 
+# The container runs as your uid, so everything it writes through the ./database
+# mount stays yours. Without this, a root container leaves dwh.duckdb owned by
+# root and the next `make streamlit_app` dies with "Permission denied".
 local_deploy:
 	docker rm -f expat-app 2>/dev/null || true
 	docker run -d --name expat-app -p 8080:8080 --env-file .env \
