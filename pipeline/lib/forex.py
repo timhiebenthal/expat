@@ -16,12 +16,16 @@ BASE_CURRENCY = "EUR"
 # A currency with no rows must abort: the dbt models join the rate into the
 # earnings and cost tables, so a missing rate silently drops every city that uses
 # it. This sentinel guarantees EUR itself always has a row.
+#
+# Its keys and value types must match a downloaded row exactly: the destination
+# infers its schema from the first row, so a row that differs lands as nulls.
 EUR_ROW = {
     "date": "2024-01-01",
     "open": 1.0,
     "high": 1.0,
     "low": 1.0,
     "close": 1.0,
+    "volume": 0,
     "from_currency": "EUR",
     "to_currency": "EUR",
 }
@@ -39,15 +43,19 @@ def build_ticker(base_currency, foreign_currency):
 
 
 def flatten_download(frame):
-    """Drop yfinance's MultiIndex ticker level and move the date out of the index.
+    """Drop yfinance's MultiIndex ticker level, lowercase the names, move the date out.
 
     yfinance hands back columns like ('Close', 'GBPEUR=X'); the first level is
-    the price and the second is the ticker, which is dropped so the frame carries
-    plain open/high/low/close columns.
+    the price and the second is the ticker, which is dropped. Names are
+    lowercased both to match the shape dlt used to write and because the
+    destination infers its schema from the first row: a row carrying
+    differently-cased keys (the EUR sentinel did) lands as nulls, not values.
     """
     frame = frame.copy()
     frame.columns = [column[0] for column in frame.columns]
-    return frame.reset_index()
+    frame = frame.reset_index()
+    frame.columns = [str(column).lower() for column in frame.columns]
+    return frame
 
 
 def get_forex_data(
@@ -67,6 +75,10 @@ def get_forex_data(
         return None
 
     frame = flatten_download(frame)
+    # One shape for every row: the destination infers its schema from the first
+    # row, so the EUR sentinel below must match this exactly. An ISO string also
+    # reproduces the VARCHAR date dlt used to write.
+    frame["date"] = frame["date"].dt.strftime("%Y-%m-%dT%H:%M:%S")
     frame["from_currency"] = foreign_currency
     frame["to_currency"] = base_currency
     logging.info(
