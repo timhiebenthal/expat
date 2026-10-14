@@ -3,7 +3,7 @@
 Two things used to go wrong here and both were silent:
 
 - the ticker ran in the wrong direction, so the GBP rate was the reciprocal of
-  the one the models assume (they divide by it to reach EUR)
+  the one the models assume (they multiply by it to reach EUR)
 - a currency that yahoo refused to serve was dropped from the table, and the
   conversion join then dropped the cities that used it
 
@@ -25,8 +25,9 @@ def forex():
 def test_ticker_quotes_the_foreign_currency_in_the_base(forex):
     """from_currency=GBP, to_currency=EUR needs GBPEUR=X, not EURGBP=X.
 
-    EURGBP=X quotes GBP in EUR - the reciprocal - and dividing a GBP salary by
-    it produces numbers that are wrong by the square of the real rate.
+    GBPEUR=X is the EUR value of one pound, which the core models multiply a GBP
+    salary by. EURGBP=X is the reciprocal and would invert every amount, leaving
+    a GBP salary wrong by the square of the real rate.
     """
     assert forex.build_ticker("EUR", "GBP") == "GBPEUR=X"
     assert forex.build_ticker("EUR", "JPY") == "JPYEUR=X"
@@ -74,7 +75,60 @@ def test_the_eur_row_carries_the_same_keys_as_a_downloaded_row(forex):
     }
 
 
+def _pair_frame(prices, ticker):
+    """One yfinance-looking download for a single pair, MultiIndex and all."""
+    open_, high, low, close = prices
+    raw = pd.DataFrame(
+        {"Open": [open_], "High": [high], "Low": [low], "Close": [close], "Volume": [0]},
+        index=pd.DatetimeIndex(["2026-01-02"], name="Date"),
+    )
+    raw.columns = pd.MultiIndex.from_product(
+        [["Open", "High", "Low", "Close", "Volume"], [ticker]]
+    )
+    return raw
+
+
+def test_inverse_is_not_requested_when_the_pair_is_served(forex):
+    """The fallback costs an extra request, so a served pair must not pay it."""
+    requested = []
+
+    def download(ticker, **kwargs):
+        requested.append(ticker)
+        return _pair_frame((3.4, 3.5, 3.3, 3.44), ticker)
+
+    forex.get_forex_data("EUR", "ILS", download=download)
+
+    assert requested == ["ILSEUR=X"]
+
+
+def test_missing_pair_falls_back_to_the_inverse(forex):
+    """Yahoo serves EURILS=X but not ILSEUR=X, so the pair is fetched inverted.
+
+    The row must keep close = EUR per ILS, exactly what the direct ticker would
+    have returned, so no downstream amount moves when the fallback engages.
+    """
+    requested = []
+
+    def download(ticker, **kwargs):
+        requested.append(ticker)
+        return (
+            _pair_frame((3.4, 3.5, 3.3, 3.44), ticker)
+            if ticker == "EURILS=X"
+            else pd.DataFrame()
+        )
+
+    rows = forex.get_forex_data("EUR", "ILS", download=download)
+
+    assert requested == ["ILSEUR=X", "EURILS=X"]
+    assert rows[0]["from_currency"] == "ILS"
+    assert rows[0]["to_currency"] == "EUR"
+    assert rows[0]["close"] == pytest.approx(1 / 3.44)
+    assert rows[0]["high"] == pytest.approx(1 / 3.3)
+    assert rows[0]["low"] == pytest.approx(1 / 3.5)
+
+
 def test_missing_currency_aborts_instead_of_writing_a_partial_table(forex):
+    """Both directions empty means a genuinely unserved pair, and it still aborts."""
     with pytest.raises(RuntimeError, match="GBP"):
         forex.currency_rates(["GBP"], download=lambda *a, **k: pd.DataFrame())
 
