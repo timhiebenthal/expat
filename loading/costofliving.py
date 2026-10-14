@@ -42,14 +42,28 @@ def parse_table_rows(table):
     return rows
 
 
+def build_city_url(city):
+    """numbeo keys cities off a slug, so spaces become dashes.
+
+    The slug must stay the bare city name: appending the country ("Munich-Germany")
+    is not a valid key and numbeo answers with an error page that carries no table.
+    """
+    return f"https://www.numbeo.com/cost-of-living/in/{city.replace(' ', '-')}"
+
+
 def get_city_data(city):
-    url = f"https://www.numbeo.com/cost-of-living/in/{city}"
+    url = build_city_url(city)
     response = requests.get(url, timeout=30)
+    response.raise_for_status()
     soup = BeautifulSoup(response.content, "html.parser")
     table = soup.find("table", class_="data_wide_table new_bar_table")
 
     table_data = parse_table_rows(table)
     if not table_data:
+        # numbeo serves a 200 with an error page ("Cannot find city id for ...")
+        # instead of the table, so the page title is the only diagnostic left.
+        title = soup.title.text.strip() if soup.title else "no title"
+        logging.warning(f"No cost of living table at '{url}' - page says: {title}")
         return None
 
     return [{"city": city, "data": table_data}]
@@ -76,18 +90,20 @@ def run_pipeline():
     failed_cities = []
     logging.info(f"Retrieving data for {len(cities):,d} cities.")
     for city in tqdm(cities):
-        city_string = city.replace(" ", "-")
-        city_data = get_city_data(city_string)
+        city_data = get_city_data(city)
         if city_data:
             data.append(city_data)
         else:
-            failed_cities.append(city_string)
+            failed_cities.append(city)
 
-    if len(failed_cities) > 0:
-        for city in failed_cities:
-            logging.error(
-                f"ERROR! for '{city}'.Please check & correct this city: 'https://www.numbeo.com/cost-of-living/in/{city}'"
-            )
+    for city in failed_cities:
+        logging.error(
+            f"ERROR! for '{city}'. Please check & correct this city: '{build_city_url(city)}'"
+        )
+
+    if not data:
+        logging.error("No city returned data - refusing to truncate the cost of living table.")
+        return
 
     load_data(data)
 

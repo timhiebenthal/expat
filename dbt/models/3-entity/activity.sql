@@ -18,7 +18,7 @@ with
                 when category_slug in ('restaurant', 'groceries')
                 then true
                 else true
-            end as is_dynamic_in_dashboard,
+            end as is_dynamic_in_dashboard
         from unique_activities
     )
 
