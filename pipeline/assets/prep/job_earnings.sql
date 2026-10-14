@@ -31,7 +31,6 @@ custom_checks:
       )
     value: 0
 @bruin */
-
 -- The join is on job title AND experience. Dropping either side of it is what
 -- silently removed every row for a job before, so both stay.
 with
@@ -41,18 +40,19 @@ with
             country_name,
             case
                 when jobtitle_and_experience like '% with %'
-                    then split_part(jobtitle_and_experience, ' with ', 1)
+                then split_part(jobtitle_and_experience, ' with ', 1)
                 when regexp_full_match(jobtitle_and_experience, '.*, \d+ years')
-                    then split_part(jobtitle_and_experience, ', ', 1)
+                then split_part(jobtitle_and_experience, ', ', 1)
             end as job_title,
             try_cast(
                 case
                     when jobtitle_and_experience like '% with %'
-                        then regexp_extract(
+                    then
+                        regexp_extract(
                             split_part(jobtitle_and_experience, ' with ', 2), '(\d+)'
                         )
                     when regexp_full_match(jobtitle_and_experience, '.*, \d+ years')
-                        then regexp_extract(jobtitle_and_experience, '(\d+)')
+                    then regexp_extract(jobtitle_and_experience, '(\d+)')
                 end as int
             ) as job_experience,
             local_currency,
@@ -64,7 +64,8 @@ with
     filter_for_jobs_with_data as (
         select clean_job.*
         from clean_job
-        inner join analytics.clean__config_jobs as config
+        inner join
+            analytics.clean__config_jobs as config
             on clean_job.job_title = config.job_title
             and clean_job.job_experience = config.job_experience
     )

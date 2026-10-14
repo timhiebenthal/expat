@@ -14,7 +14,6 @@ tags:
   - layer:transform
   - layer:clean
 @bruin */
-
 -- Verbatim port, minus dlt's _dlt_load_id / _dlt_id: the new ingest does not
 -- write them and nothing downstream reads them.
 select

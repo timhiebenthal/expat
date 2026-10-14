@@ -14,7 +14,6 @@ tags:
   - layer:transform
   - layer:core
 @bruin */
-
 -- Port of the dbt model. The two CASE arms that both yield true are kept as they
 -- are: collapsing them would be a cleanup, not a port.
 with
@@ -45,9 +44,9 @@ with
             *,
             case
                 when regexp_matches(activity_name, 'Housing|Education|Child')
-                    then false
+                then false
                 when category_slug in ('restaurant', 'groceries')
-                    then true
+                then true
                 else true
             end as is_dynamic_in_dashboard
         from unique_activities

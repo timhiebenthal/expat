@@ -16,7 +16,6 @@ tags:
   - layer:transform
   - layer:prep
 @bruin */
-
 -- Port of the dbt model with the parent/child join removed (the ingest already
 -- flattened it). The Cost group mapping keeps its four overrides, and the group
 -- column stays collapsed into activity_category rather than being duplicated.
@@ -61,18 +60,19 @@ with
             mapping.activity_type,
             case
                 when data.category = '1 Bedroom Apartment in City Centre'
-                    then '1 Room Appart. Center'
+                then '1 Room Appart. Center'
                 when data.category = '3 Bedroom Apartment in City Centre'
-                    then '3 Room Appart. Center'
+                then '3 Room Appart. Center'
                 when data.category = '1 Bedroom Apartment Outside of City Centre'
-                    then '1 Room Appart. Outside'
+                then '1 Room Appart. Outside'
                 when data.category = '3 Bedroom Apartment Outside of City Centre'
-                    then '3 Room Appart. Outside'
+                then '3 Room Appart. Outside'
                 else mapping.activity_type
             end as activity_category,
             cast(mapping.activity_count as integer) as monthly_activity_count,
-            data.cost_value * cast(mapping.activity_count as integer)
-                as monthly_activity_cost        from flattening as data
+            data.cost_value
+            * cast(mapping.activity_count as integer) as monthly_activity_cost
+        from flattening as data
         inner join analytics.seed_activity_mapping mapping using (category)
     )
 
