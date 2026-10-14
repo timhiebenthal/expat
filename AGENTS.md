@@ -6,9 +6,10 @@ documents it names.
 ## Commands
 
 - `make test` runs `uv run pytest tests`. It is also wired as a pre-commit hook
-  (`.pre-commit-config.yaml`), so commits run it for you.
-- `make fmt` runs the declared SQL formatter (`shandy-sqlfmt`) over `pipeline/`. Opt-in; the
-  formatter was only reachable from a VS Code extension before.
+  (`.pre-commit-config.yaml`), so commits run it for you. A fresh clone needs
+  `uv tool install pre-commit` and then `pre-commit install`, once.
+- `make fmt` runs the declared SQL formatter (`shandy-sqlfmt`) over `pipeline/`. The pre-commit
+  hook runs the same command, so the SQL stays formatted without anyone remembering.
 - `uv`, `bruin` and `pre-commit` live in `~/.local/bin`, which is **not** on the shell's PATH
   (non-interactive bash reads neither `~/.bashrc` nor `~/.profile`). Prefix
   `export PATH="$HOME/.local/bin:$PATH"` or use the full path.
