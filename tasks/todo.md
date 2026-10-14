@@ -106,14 +106,14 @@ Three independent streams with disjoint files; safe to parallelize.
 **Description:** Move the FX logic out of `loading/forex.py` into a network-free module. The ticker direction fix and the multi-index column flattening are the parts worth protecting, so they must survive with their tests.
 
 **Acceptance criteria:**
-- [ ] `build_ticker` and the yfinance response flattening live in `pipeline/lib/forex.py`
-- [ ] The ticker asserts the `GBPEUR=X` direction, not `EURGBP=X`
-- [ ] The "a currency with no rows aborts rather than writing a partial table" behaviour is preserved and still tested
-- [ ] No module-level network calls
+- [x] `build_ticker` and the yfinance response flattening live in `pipeline/lib/forex.py`
+- [x] The ticker asserts the `GBPEUR=X` direction, not `EURGBP=X`
+- [x] The "a currency with no rows aborts rather than writing a partial table" behaviour is preserved and still tested
+- [x] No module-level network calls
 
 **Verification:**
-- [ ] `uv run pytest tests/test_forex.py -q` passes
-- [ ] `uv run pytest tests -q` passes in full
+- [x] `uv run pytest tests/test_forex.py -q` passes
+- [x] `uv run pytest tests -q` passes in full
 
 **Dependencies:** None
 

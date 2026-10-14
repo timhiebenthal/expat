@@ -52,7 +52,7 @@ Consequence for ordering: `core__cost_of_living` needs currency and FX rates, so
 
 ### Phase 1: Shared Python (three disjoint streams, parallelizable)
 - [x] Task 3 `[ingest]` Extract `pipeline/lib/numbeo.py`
-- [ ] Task 4 `[ingest]` Extract `pipeline/lib/forex.py`
+- [x] Task 4 `[ingest]` Extract `pipeline/lib/forex.py`
 - [ ] Task 5 `[ingest]` Extract `pipeline/lib/earnings.py`
 
 ### Checkpoint B
