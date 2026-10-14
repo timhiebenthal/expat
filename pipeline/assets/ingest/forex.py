@@ -6,9 +6,8 @@ materialization:
   type: table
   strategy: create+replace
 
-# TODO(Task 7): add `depends: [raw_earnings.job_earnings]` once the earnings
-# ingest asset exists. This asset reads that table for the currency list, so the
-# ordering matters for a full run; declared here it would dangle until Task 7.
+depends:
+  - raw_earnings.job_earnings
 
 tags:
   - layer:ingest
