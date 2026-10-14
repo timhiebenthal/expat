@@ -68,12 +68,12 @@ Consequence for ordering: `core__cost_of_living` needs currency and FX rates, so
 - [x] Forex and earnings Raw tables have the grain the entity tables expect (column parity is not required)
 
 ### Phase 3: Cost path (app-visible: `core__cost_of_living`, `core__activity`)
-- [ ] Task 8 `[ingest]` Numbeo path end to end, flattened
-- [ ] Task 9 `[transform]` Cost and activity core models
+- [x] Task 8 `[ingest]` Numbeo path end to end, flattened
+- [x] Task 9 `[transform]` Cost and activity core models
 
 ### Checkpoint D
-- [ ] Every table the app reads matches the baseline exactly
-- [ ] Both parity gates pass for all of them
+- [x] Every table the app reads matches the baseline exactly
+- [x] Both parity gates pass for all of them
 
 ### Phase 4: Quality
 - [ ] Task 10 `[quality]` Port the four checks

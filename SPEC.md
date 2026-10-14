@@ -61,9 +61,13 @@ curl -LsSf https://getbruin.com/install/cli | sh -s v0.11.778
 export DUCKDB_LOCATION=database/dwh.duckdb
 
 bruin validate pipeline
-bruin run pipeline
 
-bruin run pipeline/assets/ingest/numbeo.py
+# --workers 1 is required. Bruin defaults to 16 parallel workers and DuckDB
+# allows a single writer, so independent assets - and a seed's ingestr
+# subprocess - collide with "Could not set lock on file".
+bruin run pipeline --workers 1
+
+bruin run pipeline/assets/ingest/numbeo.py --workers 1
 bruin render pipeline/assets/core/cost_of_living.sql
 
 # --- Parity work ---------------------------------------------------------
@@ -75,10 +79,10 @@ export DUCKDB_LOCATION=baseline/dwh.duckdb
 # Transforms only, over frozen Raw inputs. Selected assets do NOT drag in their
 # upstreams, so this never re-fetches. A directory argument would NOT work here
 # - it is read as a pipeline root, not a folder scope.
-bruin run pipeline --selector "tag:layer:transform"
+bruin run pipeline --selector "tag:layer:transform" --workers 1
 
 # Same thing by path, if tags are not yet in place
-bruin run pipeline --selector "path:assets/clean path:assets/prep path:assets/core"
+bruin run pipeline --selector "path:assets/clean path:assets/prep path:assets/core" --workers 1
 
 # Parity gate 1: schema and row counts. --full is NOT usable here - its
 # numerical-statistics step crashes on DuckDB DECIMAL columns.
@@ -232,6 +236,9 @@ Four layers. None of them is a coverage gate.
 - **No Raw column parity.** The Bruin ingest defines the new Raw contract and does not reproduce dlt's metadata columns. `raw_forex.forex_daily` carries Bruin's own `_ingestr_loaded_at` / `_ingestr_run_id` instead.
 - **Python assets must not set `image: python:3.13`.** Bruin resolves the interpreter from it, and `requires-python` is `>=3.11,<3.13`, so `uv lock` refuses and the asset fails at run time.
 - **`create+replace` does not drop a pre-existing table.** Against a warehouse that still has dlt's tables, Bruin keeps the old columns and back-fills them with `'-'`. Cutover must drop the dlt-era `raw_*` tables so the new contract takes effect.
+- **Every run needs `--workers 1`.** Bruin defaults to 16 parallel workers and DuckDB allows one writer, so independent assets collide on the file lock.
+- **The activity mapping is a `duckdb.seed` asset**, at `pipeline/assets/seed/`, tagged `layer:transform` because a selector does not pull in upstreams. `activity_count` is cast to INTEGER in prep: ingestr types every CSV column as text/BIGINT.
+- **The flattened numbeo Raw needs a fixture for parity.** `scripts/flatten_frozen_numbeo.sql` rebuilds the frozen parent/child in the flat shape, in a scratch copy, so the flat models are exercised against frozen values rather than a fresh scrape.
 
 ## Open Questions
 
