@@ -130,14 +130,14 @@ Three independent streams with disjoint files; safe to parallelize.
 **Description:** Move the LLM earnings logic out of `loading/llm_earnings.py` into a network-free module: the canonical job string, the job-string stamping that overrides whatever the model returns, and the city-completeness assertion.
 
 **Acceptance criteria:**
-- [ ] `build_job_string`, `attach_job_string` and `assert_every_city_came_back` live in `pipeline/lib/earnings.py`
-- [ ] The job string parses back to the configured title under `prep__job_earnings`' own expressions
-- [ ] The override of a reworded title is preserved and still tested
-- [ ] No module-level network calls; the LLM call is injected
+- [x] `build_job_string`, `attach_job_string` and `assert_every_city_came_back` live in `pipeline/lib/earnings.py`
+- [x] The job string parses back to the configured title under `prep__job_earnings`' own expressions
+- [x] The override of a reworded title is preserved and still tested
+- [x] No module-level network calls; the LLM call is injected
 
 **Verification:**
-- [ ] `uv run pytest tests/test_llm_earnings.py -q` passes
-- [ ] `uv run pytest tests -q` passes in full
+- [x] `uv run pytest tests/test_llm_earnings.py -q` passes
+- [x] `uv run pytest tests -q` passes in full
 
 **Dependencies:** None
 
@@ -151,9 +151,9 @@ Three independent streams with disjoint files; safe to parallelize.
 
 ## Checkpoint B: Shared Python
 
-- [ ] `uv run pytest tests` green in full
-- [ ] No network calls anywhere under `pipeline/lib/`
-- [ ] `loading/` still imports, so the old path stays runnable until cutover
+- [x] `uv run pytest tests` green in full
+- [x] No network calls anywhere under `pipeline/lib/`
+- [x] `loading/` still imports, so the old path stays runnable until cutover
 
 ---
 

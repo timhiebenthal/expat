@@ -53,11 +53,11 @@ Consequence for ordering: `core__cost_of_living` needs currency and FX rates, so
 ### Phase 1: Shared Python (three disjoint streams, parallelizable)
 - [x] Task 3 `[ingest]` Extract `pipeline/lib/numbeo.py`
 - [x] Task 4 `[ingest]` Extract `pipeline/lib/forex.py`
-- [ ] Task 5 `[ingest]` Extract `pipeline/lib/earnings.py`
+- [x] Task 5 `[ingest]` Extract `pipeline/lib/earnings.py`
 
 ### Checkpoint B
-- [ ] `uv run pytest tests` green with imports re-pointed
-- [ ] No network access anywhere under `pipeline/lib/`
+- [x] `uv run pytest tests` green with imports re-pointed
+- [x] No network access anywhere under `pipeline/lib/`
 
 ### Phase 2: Forex and earnings paths (app-visible: `core__job_earnings`)
 - [ ] Task 6 `[ingest]` Forex path end to end
