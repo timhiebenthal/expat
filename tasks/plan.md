@@ -43,7 +43,7 @@ Consequence for ordering: `core__cost_of_living` needs currency and FX rates, so
 ## Task List
 
 ### Phase 0: Foundations (fail-fast, sequential)
-- [ ] Task 1 `[oracle]` Branch and capture the baseline
+- [x] Task 1 `[oracle]` Branch and capture the baseline
 - [ ] Task 2 `[ingest]` Bruin skeleton proven against DuckDB
 
 ### Checkpoint A

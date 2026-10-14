@@ -11,18 +11,18 @@ Plan: `tasks/plan.md` | Contract: `SPEC.md` | Module ids: `oracle` `ingest` `tra
 **Description:** Create the migration branch and capture the frozen baseline before anything else changes. Run the final `dbt build` so `analytics.*` is current for a deliberate config, copy the warehouse to `baseline/dwh.duckdb`, rename the dbt output to the target names under a `baseline.` schema, and write a manifest recording the config, timestamp and row counts. This is the only irreversible step in the migration: once dlt stops writing `raw_*`, the inputs cannot be reconstructed.
 
 **Acceptance criteria:**
-- [ ] The deliberate config is in `raw_config.cities` / `raw_config.jobs` and recorded in the manifest
-- [ ] A final `dbt build` succeeds on that config before the copy is taken
-- [ ] Every baseline table exists under its *target* name, e.g. `analytics.job_earnings` -> `baseline.core__job_earnings`
-- [ ] `dataset__cost_earnings_comparison` is excluded, since it has no target
-- [ ] The manifest records row counts for every baseline table and for every `raw_*` table
-- [ ] `baseline/` is gitignored; the capture script is committed
+- [x] The deliberate config is in `raw_config.cities` / `raw_config.jobs` and recorded in the manifest
+- [x] A final `dbt build` succeeds on that config before the copy is taken
+- [x] Every baseline table exists under its *target* name, e.g. `analytics.job_earnings` -> `baseline.core__job_earnings`
+- [x] `dataset__cost_earnings_comparison` is excluded, since it has no target
+- [x] The manifest records row counts for every baseline table and for every `raw_*` table
+- [x] `baseline/` is gitignored; the capture script is committed
 
 **Verification:**
-- [ ] `git status --short` shows no `baseline/` contents
-- [ ] `uv run python scripts/capture_baseline.py` is idempotent, or refuses to overwrite an existing baseline
-- [ ] A read-only DuckDB connection lists every expected `baseline.*` table
-- [ ] Row counts in the manifest match a fresh `count(*)` per table
+- [x] `git status --short` shows no `baseline/` contents
+- [x] `uv run python scripts/capture_baseline.py` is idempotent, or refuses to overwrite an existing baseline
+- [x] A read-only DuckDB connection lists every expected `baseline.*` table
+- [x] Row counts in the manifest match a fresh `count(*)` per table
 
 **Dependencies:** None
 
