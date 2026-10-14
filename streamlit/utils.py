@@ -1,7 +1,30 @@
 import altair as alt
-import streamlit as st
 import logging
 import os
+from pathlib import Path
+
+import streamlit as st
+from dotenv import load_dotenv
+
+# Docker and Cloud Run inject DUCKDB_LOCATION as a real environment variable. On
+# the host there is no shell export, so read it from .env. load_dotenv leaves an
+# already-set variable alone, so the container's value always wins.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(REPO_ROOT / ".env")
+
+
+def define_database_location():
+    """Resolve DUCKDB_LOCATION once.
+
+    A relative path is anchored at the repo root so the app does not depend on
+    the working directory. Docker and Cloud Run pass an absolute path, which is
+    used as-is.
+    """
+    location = Path(os.environ.get("DUCKDB_LOCATION", "database/dwh.duckdb"))
+    return str(location if location.is_absolute() else REPO_ROOT / location)
+
+
+DATABASE_LOCATION = define_database_location()
 
 # configure timestamp for logging
 logging.basicConfig(
@@ -42,7 +65,7 @@ def load_config():
     import duckdb
     import os
 
-    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    dwh = duckdb.connect(DATABASE_LOCATION)
     cities = dwh.table("raw_config.cities").df()["name"].tolist()
     jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
 
@@ -80,7 +103,7 @@ def save_config_to_duckdb(city_df, jobs_df):
         }
     )
     # upload tables to DuckDB
-    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    dwh = duckdb.connect(DATABASE_LOCATION)
     dwh.sql("CREATE SCHEMA IF NOT EXISTS raw_config")
     dwh.sql("CREATE OR REPLACE TABLE raw_config.cities AS SELECT * FROM city_df")
     dwh.sql("CREATE OR REPLACE TABLE raw_config.jobs AS SELECT * FROM jobs_df")

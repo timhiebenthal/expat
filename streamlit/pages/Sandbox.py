@@ -1,13 +1,13 @@
 import streamlit as st
 import duckdb
-import os
 import pandas as pd
+import utils
 
 
 st.subheader("Just a page to test things")
 
 # init DWH connection
-dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+dwh = duckdb.connect(utils.DATABASE_LOCATION)
 cost_comparsion_df = dwh.sql("select * from dwh.analytics.cost_of_living").df()
 dwh.close()  # close connection to not block the database
 

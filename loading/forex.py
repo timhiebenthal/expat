@@ -2,7 +2,6 @@ import pandas as pd
 import dlt
 import logging
 import json
-import os
 import yfinance as yf
 import utils
 import datetime as dt
@@ -28,7 +27,7 @@ dt_yesterday = (dt.date.today() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def get_needed_currencies():
-    dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+    dwh = duckdb.connect(utils.DATABASE_LOCATION)
     df = dwh.sql(
         "select distinct currency from dwh.raw_earnings.job_earnings where currency != 'EUR'"
     ).df()

@@ -19,7 +19,7 @@ location_mapping = {
 }
 
 # getting data from DWH
-dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"])
+dwh = duckdb.connect(utils.DATABASE_LOCATION)
 job_earnings_df = dwh.sql("select * from dwh.analytics.job_earnings").df()
 activity_df = dwh.sql(
     "select * from dwh.analytics.activity where is_dynamic_in_dashboard is true"
