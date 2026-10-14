@@ -81,7 +81,7 @@ def test_page_offers_every_city_that_has_earnings(comparison_page):
     dwh = duckdb.connect(os.environ["DUCKDB_LOCATION"], read_only=True)
     try:
         expected = set(
-            dwh.sql("select distinct city_name from analytics.job_earnings").df()[
+            dwh.sql("select distinct city_name from analytics.core__job_earnings").df()[
                 "city_name"
             ]
         )

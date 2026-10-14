@@ -14,12 +14,30 @@ pin down.
 """
 
 import os
+import shutil
 import sys
 
 import pytest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STREAMLIT_DIR = os.path.join(REPO_ROOT, "streamlit")
+
+
+def _has_dlt_raw(path):
+    """dbt reads dlt's raw columns, so it can only build on a dlt-shaped file."""
+    import duckdb
+
+    con = duckdb.connect(path, read_only=True)
+    try:
+        columns = {
+            row[0]
+            for row in con.execute("describe raw_numbeo.cost_of_living").fetchall()
+        }
+    except duckdb.Error:
+        return False
+    finally:
+        con.close()
+    return "_dlt_id" in columns
 
 
 @pytest.fixture(scope="module")
@@ -46,14 +64,28 @@ def duckdb_fds_open_in_this_process(needle="dwh.duckdb"):
 
 @pytest.fixture
 def warehouse(tmp_path):
-    """A private copy, so the test never touches the repo's own database."""
-    source = os.path.join(REPO_ROOT, "database", "dwh.duckdb")
-    if not os.path.exists(source):
-        pytest.skip("no warehouse to copy")
+    """A private copy of a warehouse dbt can actually build on.
+
+    dbt reads dlt's `_dlt_id` / `_dlt_load_id`, and the repo's own warehouse is
+    Bruin-shaped after the migration, so it is no longer a valid target. Prefer
+    the frozen baseline copy, which still holds dlt's `raw_*`, and skip when
+    neither candidate is dlt-shaped.
+    """
+    candidates = [
+        os.path.join(REPO_ROOT, "baseline", "dwh.duckdb"),
+        os.path.join(REPO_ROOT, "database", "dwh.duckdb"),
+    ]
+    source = next(
+        (c for c in candidates if os.path.exists(c) and _has_dlt_raw(c)), None
+    )
+    if source is None:
+        pytest.skip("no dlt-shaped warehouse to build on")
+
     target = tmp_path / "dwh.duckdb"
-    with open(source, "rb") as src, open(target, "wb") as dst:
-        while chunk := src.read(1024 * 1024):
-            dst.write(chunk)
+    shutil.copyfile(source, target)
+    wal = source + ".wal"
+    if os.path.exists(wal):
+        shutil.copyfile(wal, str(target) + ".wal")
     return target
 
 

@@ -20,11 +20,11 @@ location_mapping = {
 
 # getting data from DWH
 dwh = duckdb.connect(utils.DATABASE_LOCATION)
-job_earnings_df = dwh.sql("select * from dwh.analytics.job_earnings").df()
+job_earnings_df = dwh.sql("select * from dwh.analytics.core__job_earnings").df()
 activity_df = dwh.sql(
-    "select * from dwh.analytics.activity where is_dynamic_in_dashboard is true"
+    "select * from dwh.analytics.core__activity where is_dynamic_in_dashboard is true"
 ).df()
-cost_of_living_df = dwh.sql("select * from dwh.analytics.cost_of_living").df()
+cost_of_living_df = dwh.sql("select * from dwh.analytics.core__cost_of_living").df()
 dwh.close()  # close connection to not block the database
 
 city_list = job_earnings_df["city_name"].sort_values().unique().tolist()

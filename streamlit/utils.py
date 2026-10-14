@@ -1,6 +1,7 @@
 import altair as alt
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -195,56 +196,52 @@ def run_dbt(args):
     return result.returncode == 0
 
 
+def bruin_executable():
+    """The pinned Bruin CLI.
+
+    curl-installed to ~/.local/bin on the host and into /usr/local/bin in the
+    image. shutil.which covers the image and any PATH install; the fallback
+    covers a host shell that never sourced ~/.bruin/env.
+    """
+    found = shutil.which("bruin")
+    if found:
+        return found
+    return str(Path.home() / ".local" / "bin" / "bruin")
+
+
 def run_pipeline():
+    """Shell out to Bruin for the whole pipeline.
+
+    One subprocess replaces the three loaders plus dbt deps/build. It has to be a
+    subprocess: DuckDB takes a single writer, so the app must not still hold the
+    file. --workers 1 for the same reason - Bruin runs 16 workers by default and
+    they collide on the warehouse lock.
+    """
     import time
 
     print("\n>>>> Running pipeline ...\n")
 
-    # Paths are derived from the repo root, never hardcoded: the same code runs
-    # from the host (make streamlit_app) and from /app inside the container.
-    loaders = [
-        ("Retrieve earnings data from LLM model ...", "llm_earnings.py"),
-        ("Retrieve cost of living data from numbeo.com ...", "costofliving.py"),
-        ("Retrieve forex data from Yahoo finance ...", "forex.py"),
-    ]
-
     with st.status("Preparing your comparsion ...", expanded=True) as status:
-        for label, script in loaders:
-            st.write(label)
-            # sys.executable rather than "python": the app already runs inside
-            # the project venv, and that is the interpreter with the loaders'
-            # dependencies on its path.
-            result = subprocess.run(
-                [sys.executable, str(REPO_ROOT / "loading" / script)],
-                capture_output=True,
-                text=True,
-            )
-            print(result.stdout)
-            print(result.stderr)
-            if result.returncode != 0:
-                # A failing loader used to be swallowed, so the run carried on
-                # and reported success while nothing had been loaded.
-                st.error(f"{script} failed with exit code {result.returncode}.")
-                status.update(label="Pipeline failed", state="error", expanded=True)
-                return False
-            time.sleep(1)
+        st.write("Run Bruin pipeline ...")
 
-        st.write("Run dbt pipeline ...")
-        if not run_dbt(["deps"]):
-            st.error("dbt deps failed! Please check the logs.")
+        result = subprocess.run(
+            [bruin_executable(), "run", "pipeline", "--workers", "1"],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO_ROOT),
+        )
+        print(result.stdout)
+        print(result.stderr)
+
+        if result.returncode != 0:
+            # A failing step used to be swallowed, so the run carried on and
+            # reported success while nothing had been loaded.
+            st.error("Bruin pipeline failed! Please check the logs.")
             status.update(label="Pipeline failed", state="error", expanded=True)
             return False
-        print(">>>>>>>>>>>> dbt deps installed.")
 
-        if run_dbt(["build", "--target", "prod"]):
-            print(">>>>>>>>>>>> dbt run successful.")
-
-            status.update(label="Pipeline complete!", state="complete", expanded=False)
-            success_info = st.success("Pipeline run successful! :)", icon="✅")
-            time.sleep(2)  # Wait for 2 seconds
-            success_info.empty()  # Clear the alert
-            return True
-        else:
-            st.error("dbt run failed! Please check the logs.")
-            status.update(label="Pipeline failed", state="error", expanded=True)
-            return False
+        status.update(label="Pipeline complete!", state="complete", expanded=False)
+        success_info = st.success("Pipeline run successful! :)", icon="✅")
+        time.sleep(2)  # Wait for 2 seconds
+        success_info.empty()  # Clear the alert
+        return True
