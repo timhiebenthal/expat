@@ -1,10 +1,12 @@
 """Yahoo Finance FX rates, free of dlt and of network calls at import.
 
-Two things here have silently broken before, so both are named functions with
-their own tests: the ticker direction (Yahoo quotes one currency in another, and
-getting it backwards squares the error) and the flattening of yfinance's
-MultiIndex columns. `loading/forex.py` stays as the dlt-era entry point until
-cutover and is not imported from here.
+Three things here have silently broken before, so all three are named functions
+with their own tests: the ticker direction (Yahoo quotes one currency in another,
+and getting it backwards squares the error), the flattening of yfinance's
+MultiIndex columns, and the pairs Yahoo only serves one way round (`EURILS=X` has
+a year of history while `ILSEUR=X` has none, so the pair is fetched inverted and
+turned back). `loading/forex.py` stays as the dlt-era entry point until cutover
+and is not imported from here.
 """
 
 import logging
@@ -42,6 +44,18 @@ def build_ticker(base_currency, foreign_currency):
     return f"{foreign_currency}{base_currency}=X"
 
 
+# Yahoo serves some pairs in only one direction - EURILS=X quotes a year of
+# history while the direct ILSEUR=X quotes none - so an empty download is
+# retried inverted. Each entry maps an output column to the input column its
+# reciprocal is taken from; high and low swap because a reciprocal flips them.
+INVERSE_COLUMNS = {
+    "open": "open",
+    "high": "low",
+    "low": "high",
+    "close": "close",
+}
+
+
 def flatten_download(frame):
     """Drop yfinance's MultiIndex ticker level, lowercase the names, move the date out.
 
@@ -58,23 +72,48 @@ def flatten_download(frame):
     return frame
 
 
+def invert_download(frame):
+    """Turn a <base><foreign> download into the <foreign><base> rows asked for.
+
+    Yahoo serves ILSEUR=X with no history at all but EURILS=X with a full year,
+    so the pair is fetched the other way and reciprocated. The result carries the
+    same meaning the direct ticker would have: close is still EUR per ILS.
+    """
+    frame = frame.copy()
+    inverted = {out: 1 / frame[src] for out, src in INVERSE_COLUMNS.items()}
+    for column, values in inverted.items():
+        frame[column] = values
+    return frame
+
+
 def get_forex_data(
     base_currency, foreign_currency, download=None, start=None, end=None
 ):
     """Return the flattened rows for one pair, or None when yahoo serves none.
 
-    ``download`` defaults to ``yf.download`` and is resolved at call time, so a
-    test never reaches the network.
+    An empty direct download is retried as the inverse pair, because Yahoo lists
+    some currencies one way round only. ``download`` defaults to ``yf.download``
+    and is resolved at call time, so a test never reaches the network.
     """
     download = download or yf.download
     lookup_string = build_ticker(base_currency, foreign_currency)
 
     frame = download(lookup_string, start=start, end=end, progress=False)
+    inverted = False
     if len(frame) == 0:
-        logging.error(f"No rows for {foreign_currency} into {base_currency}.")
-        return None
+        inverse_string = build_ticker(foreign_currency, base_currency)
+        frame = download(inverse_string, start=start, end=end, progress=False)
+        if len(frame) == 0:
+            logging.error(f"No rows for {foreign_currency} into {base_currency}.")
+            return None
+        inverted = True
+        logging.warning(
+            f"No rows for {lookup_string}; using the inverse {inverse_string}."
+        )
 
     frame = flatten_download(frame)
+    if inverted:
+        frame = invert_download(frame)
     # One shape for every row: the destination infers its schema from the first
     # row, so the EUR sentinel below must match this exactly. An ISO string also
     # reproduces the VARCHAR date dlt used to write.
