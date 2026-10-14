@@ -10,12 +10,6 @@ dependencies = [
     # so nothing in the graph surfaces the conflict; without this floor uv
     # will happily resolve numpy 1.x.
     "numpy>=2.0.2",
-    # dlt imports pkg_resources, which setuptools removed in v81. This is a
-    # ceiling we cannot lift until dlt drops the import.
-    "setuptools<81",
-    # dlt imports tqdm without declaring it. It used to arrive via
-    # shandy-sqlfmt, now a dev dependency, so declare it explicitly.
-    "tqdm",
     # --- everything else: major-version ceiling only. ---
     # uv.lock holds the exact versions, so these are not pins in the usual
     # sense - they exist to stop `uv lock --upgrade` from crossing a breaking
