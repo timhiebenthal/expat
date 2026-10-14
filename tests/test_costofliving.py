@@ -2,17 +2,13 @@
 
 numbeo emits spacer rows with fewer than two cells, so indexing cells[1]
 unconditionally raises IndexError and takes the whole loading pipeline down.
-"""
 
-import os
-import sys
+The logic under test lives in `pipeline/lib/numbeo.py`; `loading/costofliving.py`
+stays as the dlt-era caller until cutover.
+"""
 
 import pytest
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOADING = os.path.join(REPO_ROOT, "loading")
-
-# As served today: header/spacer rows with 0 or 1 cells, then real data rows.
 NUMBEO_TABLE = """
 <table class="data_wide_table new_bar_table">
   <tr><td></td></tr>
@@ -26,58 +22,50 @@ NUMBEO_TABLE = """
 
 
 @pytest.fixture(scope="module")
-def costofliving():
-    os.environ.setdefault("DUCKDB_LOCATION", os.path.join(REPO_ROOT, "database/dwh.duckdb"))
-    # loading/utils.py and streamlit/utils.py share a module name, so whichever
-    # directory comes first on sys.path wins. AppTest leaves streamlit/ there,
-    # which would shadow loading/utils.py and break the module-level import.
-    sys.path.insert(0, LOADING)
-    sys.path.insert(1, REPO_ROOT)
-    sys.modules.pop("utils", None)
-    sys.modules.pop("costofliving", None)
-    import costofliving as module
+def numbeo():
+    import pipeline.lib.numbeo as module
 
     return module
 
 
-def test_short_rows_are_skipped_not_fatal(costofliving):
+def test_short_rows_are_skipped_not_fatal(numbeo):
     from bs4 import BeautifulSoup
 
     table = BeautifulSoup(NUMBEO_TABLE, "html.parser").find("table")
 
-    rows = costofliving.parse_table_rows(table)
+    rows = numbeo.parse_table_rows(table)
 
     assert [r["category"] for r in rows] == ["Meal (1)", "Coffee (1)"]
     assert [r["cost"] for r in rows] == ["15.00 €", "3.20 €"]
 
 
-def test_non_breaking_spaces_are_stripped(costofliving):
+def test_non_breaking_spaces_are_stripped(numbeo):
     from bs4 import BeautifulSoup
 
     html = '<table class="data_wide_table new_bar_table">' '<tr><td>Rent</td><td>1\xa0000 €</td></tr>' "</table>"
     table = BeautifulSoup(html, "html.parser").find("table")
 
-    assert costofliving.parse_table_rows(table)[0]["cost"] == "1000 €"
+    assert numbeo.parse_table_rows(table)[0]["cost"] == "1000 €"
 
 
-def test_missing_table_yields_no_data(costofliving):
+def test_missing_table_yields_no_data(numbeo):
     from bs4 import BeautifulSoup
 
-    assert costofliving.parse_table_rows(BeautifulSoup("<div/>", "html.parser")) == []
+    assert numbeo.parse_table_rows(BeautifulSoup("<div/>", "html.parser")) == []
 
 
-def test_city_slug_replaces_spaces_and_keeps_the_bare_city(costofliving):
+def test_city_slug_replaces_spaces_and_keeps_the_bare_city(numbeo):
     assert (
-        costofliving.build_city_url("Mexico City")
+        numbeo.build_city_url("Mexico City")
         == "https://www.numbeo.com/cost-of-living/in/Mexico-City"
     )
     assert (
-        costofliving.build_city_url("Munich-Germany")
+        numbeo.build_city_url("Munich-Germany")
         == "https://www.numbeo.com/cost-of-living/in/Munich-Germany"
     )
 
 
-def test_error_page_without_a_table_is_reported(costofliving, monkeypatch, caplog):
+def test_error_page_without_a_table_is_reported(numbeo, monkeypatch, caplog):
     """numbeo answers an unknown slug with HTTP 200 and an error page.
 
     That used to look exactly like a city with no data, so the run finished
@@ -92,9 +80,9 @@ def test_error_page_without_a_table_is_reported(costofliving, monkeypatch, caplo
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr(costofliving.requests, "get", lambda *a, **kw: Response())
+    monkeypatch.setattr(numbeo.requests, "get", lambda *a, **kw: Response())
 
     with caplog.at_level("WARNING"):
-        assert costofliving.get_city_data("Nowhere") is None
+        assert numbeo.get_city_data("Nowhere") is None
 
     assert "Cannot find city id for Nowhere" in caplog.text
