@@ -44,11 +44,11 @@ Consequence for ordering: `core__cost_of_living` needs currency and FX rates, so
 
 ### Phase 0: Foundations (fail-fast, sequential)
 - [x] Task 1 `[oracle]` Branch and capture the baseline
-- [ ] Task 2 `[ingest]` Bruin skeleton proven against DuckDB
+- [x] Task 2 `[ingest]` Bruin skeleton proven against DuckDB
 
 ### Checkpoint A
-- [ ] Baseline is captured, verified and untracked
-- [ ] `bruin validate` and `bruin run` both succeed against the baseline copy
+- [x] Baseline is captured, verified and untracked
+- [x] `bruin validate` and `bruin run` both succeed against the baseline copy
 
 ### Phase 1: Shared Python (three disjoint streams, parallelizable)
 - [ ] Task 3 `[ingest]` Extract `pipeline/lib/numbeo.py`

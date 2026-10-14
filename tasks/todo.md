@@ -39,17 +39,17 @@ Plan: `tasks/plan.md` | Contract: `SPEC.md` | Module ids: `oracle` `ingest` `tra
 **Description:** Install the pinned CLI, add `.bruin.yml` at the repo root and a `pipeline/` containing one trivial asset, and prove the whole chain works against the baseline copy. This is the fail-fast check for the riskiest unknown: whether Bruin can drive this DuckDB file at all. No real assets yet.
 
 **Acceptance criteria:**
-- [ ] CLI installed at the pinned tag and `bruin version` reports it
-- [ ] `.bruin.yml` sits at the repo root and connects with `path: "${DUCKDB_LOCATION}"`
-- [ ] `pipeline/pipeline.yml` and `pipeline/assets/probe.sql` exist; the probe writes `analytics.probe`
-- [ ] Running with `DUCKDB_LOCATION` unset is observed failing in the documented way, so the guard is understood rather than assumed
-- [ ] `analytics.probe` exists in `baseline/dwh.duckdb` afterwards and not in `database/dwh.duckdb`
+- [x] CLI installed at the pinned tag and `bruin version` reports it
+- [x] `.bruin.yml` sits at the repo root and connects with `path: "${DUCKDB_LOCATION}"`
+- [x] `pipeline/pipeline.yml` and `pipeline/assets/probe.sql` exist; the probe writes `analytics.probe`
+- [x] Running with `DUCKDB_LOCATION` unset is observed failing in the documented way, so the guard is understood rather than assumed
+- [x] `analytics.probe` exists in `baseline/dwh.duckdb` afterwards and not in `database/dwh.duckdb`
 
 **Verification:**
-- [ ] `bruin validate pipeline` succeeds
-- [ ] `bruin run pipeline` succeeds with `DUCKDB_LOCATION=baseline/dwh.duckdb`
-- [ ] The probe table is queryable and `database/dwh.duckdb` is unchanged (mtime)
-- [ ] The probe asset is deleted before Phase 2, so it never reaches a checkpoint
+- [x] `bruin validate pipeline` succeeds
+- [x] `bruin run pipeline` succeeds with `DUCKDB_LOCATION=baseline/dwh.duckdb`
+- [x] The probe table is queryable and `database/dwh.duckdb` is unchanged (mtime)
+- [x] The probe asset is deleted before Phase 2, so it never reaches a checkpoint
 
 **Dependencies:** Task 1
 
@@ -64,9 +64,9 @@ Plan: `tasks/plan.md` | Contract: `SPEC.md` | Module ids: `oracle` `ingest` `tra
 
 ## Checkpoint A: Foundations
 
-- [ ] Baseline captured, verified, and absent from git
-- [ ] `bruin validate` and `bruin run` both succeed against the baseline copy
-- [ ] The unset-`DUCKDB_LOCATION` failure mode has been seen, not merely read about
+- [x] Baseline captured, verified, and absent from git
+- [x] `bruin validate` and `bruin run` both succeed against the baseline copy
+- [x] The unset-`DUCKDB_LOCATION` failure mode has been seen, not merely read about
 - [ ] Review with human before porting models
 
 ---
