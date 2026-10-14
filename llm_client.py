@@ -31,8 +31,9 @@ def load_env() -> None:
     """Load the repo-root .env.
 
     Resolved relative to this file rather than the working directory, so it works
-    from streamlit/, from loading/, and from the repo root alike. Real environment
-    variables win, which is what keeps Docker's --env-file authoritative.
+    whatever the caller's cwd is, including a Bruin asset run from the pipeline
+    root. Real environment variables win, which is what keeps Docker's --env-file
+    authoritative.
     """
     load_dotenv(REPO_ROOT / ".env")
 

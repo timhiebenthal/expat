@@ -1,10 +1,9 @@
-"""Yahoo Finance FX rates, free of dlt and of network calls at import.
+"""Yahoo Finance FX rates, free of network calls at import.
 
 Two things here have silently broken before, so both are named functions with
 their own tests: the ticker direction (Yahoo quotes one currency in another, and
 getting it backwards squares the error) and the flattening of yfinance's
-MultiIndex columns. `loading/forex.py` stays as the dlt-era entry point until
-cutover and is not imported from here.
+MultiIndex columns. Called by `pipeline/assets/ingest/forex.py`.
 """
 
 import logging

@@ -1,4 +1,4 @@
-"""LLM salary estimates, free of dlt and of network calls at import.
+"""LLM salary estimates, free of network calls at import.
 
 The model is advisory. It is asked to echo the job title verbatim, and asking is
 not enough: the same model on the same endpoint reworded it before ("Staff
@@ -7,8 +7,7 @@ dropped every row for that job from the prep join. So the job string is built
 here and stamped over whatever comes back. The LLM call itself is injected, which
 keeps this module model-free and directly testable.
 
-`loading/llm_earnings.py` stays as the dlt-era entry point until cutover and is
-not imported from here.
+Called by `pipeline/assets/ingest/earnings.py`.
 """
 
 import logging

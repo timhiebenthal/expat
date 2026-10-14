@@ -1,10 +1,10 @@
 """Tests for the numbeo scraper.
 
 numbeo emits spacer rows with fewer than two cells, so indexing cells[1]
-unconditionally raises IndexError and takes the whole loading pipeline down.
+unconditionally raises IndexError and takes the whole ingest down.
 
-The logic under test lives in `pipeline/lib/numbeo.py`; `loading/costofliving.py`
-stays as the dlt-era caller until cutover.
+The logic under test lives in `pipeline/lib/numbeo.py`, which the numbeo ingest
+asset calls.
 """
 
 import pytest

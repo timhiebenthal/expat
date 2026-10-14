@@ -1,8 +1,7 @@
-"""numbeo cost-of-living scraping, free of dlt and of network calls at import.
+"""numbeo cost-of-living scraping, free of network calls at import.
 
 The HTTP fetch is resolved at call time, so tests never touch the network and a
-caller can inject its own fetcher. `loading/costofliving.py` stays as the
-dlt-era entry point until cutover and is not imported from here.
+caller can inject its own fetcher. Called by `pipeline/assets/ingest/numbeo.py`.
 """
 
 import logging

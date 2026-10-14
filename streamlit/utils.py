@@ -123,8 +123,8 @@ def save_config_to_duckdb(city_df, jobs_df):
         dwh.sql("CREATE OR REPLACE TABLE raw_config.jobs AS SELECT * FROM jobs_df")
         logging.info("Tables for jobs and cities uploaded to DuckDB\n")
     finally:
-        # Released here on purpose: run_pipeline() is called straight after this
-        # and its loaders are separate processes that need the write lock.
+        # Released here on purpose: run_pipeline() shells out to Bruin straight
+        # after this, and that subprocess needs the write lock.
         dwh.close()
 
 
