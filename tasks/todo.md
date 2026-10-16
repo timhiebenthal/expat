@@ -118,13 +118,13 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** In `streamlit/Home.py`, the Submit handler resolves first. If everything resolves, the existing save + `run_pipeline` path is unchanged. Otherwise it renders the panel below the editor: a lead-in caption, the resolved list one pair per line, a radio per ambiguous city, rename / paste-slug / remove per unresolved city, and a "Confirm and run pipeline" button disabled while anything is unresolved. Confirm merges the picks, saves with the slug columns, and runs the pipeline.
 
 **Acceptance criteria:**
-- [ ] An all-resolved submit behaves exactly as today.
-- [ ] Ambiguous and unresolved rows render their widgets; Confirm is disabled while blocked.
-- [ ] Confirm writes `numbeo_slug` and `numbeo_city_id` into `raw_config.cities`.
+- [x] An all-resolved submit behaves exactly as today.
+- [x] Ambiguous and unresolved rows render their widgets; Confirm is disabled while blocked.
+- [x] Confirm writes `numbeo_slug` and `numbeo_city_id` into `raw_config.cities`.
 
 **Verification:**
-- [ ] `make test` passes (`AppTest` in `tests/test_app_smoke.py` asserts the happy path and the blocked render).
-- [ ] Manual: run the app against the stubbed prototype flow.
+- [x] `make test` passes (`AppTest` in `tests/test_app_smoke.py` asserts the happy path and the blocked render).
+- Deferred: a live click-through - it needs the LLM for the city list. The `AppTest` covers both branches with `utils` stubbed.
 
 **Dependencies:** Task 5.
 **Files:** `streamlit/Home.py`, `tests/test_app_smoke.py`.

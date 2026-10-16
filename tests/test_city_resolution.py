@@ -135,3 +135,128 @@ def test_apply_resolution_drops_removed_and_unresolved_rows(utils):
     )
 
     assert [row["name"] for row in final] == ["London"]
+
+
+def test_picks_from_reads_the_slug_for_a_resolved_city(utils):
+    annotated = [
+        {
+            "name": "Munich",
+            "country": "Germany",
+            "description": "",
+            "state": "resolved",
+            "matches": [{"label": "Munich, Germany", "value": "1111"}],
+        }
+    ]
+
+    class Response:
+        headers = {"Location": "https://www.numbeo.comMunich"}
+
+        def raise_for_status(self):
+            pass
+
+    picks = utils.picks_from(annotated, fetch=lambda *a, **k: Response())
+
+    assert picks == {"Munich": {"slug": "Munich", "city_id": "1111"}}
+
+
+def test_picks_from_uses_the_chosen_match_for_an_ambiguous_city(utils):
+    annotated = [
+        {
+            "name": "London",
+            "country": "",
+            "description": "",
+            "state": "ambiguous",
+            "matches": [
+                {"label": "London, United Kingdom", "value": "1000"},
+                {"label": "London, Canada", "value": "2000"},
+            ],
+        }
+    ]
+
+    class Response:
+        headers = {"Location": "https://www.numbeo.comLondon-Canada"}
+
+        def raise_for_status(self):
+            pass
+
+    picks = utils.picks_from(
+        annotated, {"London": {"city_id": "2000"}}, fetch=lambda *a, **k: Response()
+    )
+
+    assert picks == {"London": {"slug": "London-Canada", "city_id": "2000"}}
+
+
+def test_picks_from_takes_a_manual_slug_for_an_unresolved_city(utils):
+    annotated = [
+        {
+            "name": "Nowhereville",
+            "country": "",
+            "description": "",
+            "state": "unresolved",
+            "matches": [],
+        }
+    ]
+
+    picks = utils.picks_from(annotated, {"Nowhereville": {"manual": "Tel-Aviv-Yafo"}})
+
+    assert picks == {"Nowhereville": {"slug": "Tel-Aviv-Yafo", "city_id": None}}
+
+
+def test_picks_from_marks_a_dropped_city(utils):
+    annotated = [
+        {
+            "name": "Nowhereville",
+            "country": "",
+            "description": "",
+            "state": "unresolved",
+            "matches": [],
+        }
+    ]
+
+    picks = utils.picks_from(annotated, {"Nowhereville": {"drop": True}})
+
+    assert picks == {"Nowhereville": {"drop": True}}
+
+
+def test_rename_rows_resolves_the_new_name(utils):
+    """A rename is a new name to match, so the row comes back resolved."""
+    annotated = [
+        {
+            "name": "Nowhereville",
+            "country": "",
+            "description": "",
+            "state": "unresolved",
+            "matches": [],
+        }
+    ]
+
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [{"label": "Tel Aviv-Yafo, Israel", "value": "6845"}]
+
+    updated = utils.rename_rows(
+        annotated, {"Nowhereville": "Tel Aviv"}, fetch=lambda *a, **k: Response()
+    )
+
+    assert updated[0]["name"] == "Tel Aviv"
+    assert updated[0]["state"] == "resolved"
+    assert updated[0]["matches"][0]["value"] == "6845"
+
+
+def test_rename_rows_leaves_untouched_rows_alone(utils):
+    annotated = [
+        {
+            "name": "Munich",
+            "country": "Germany",
+            "description": "",
+            "state": "resolved",
+            "matches": [{"label": "Munich, Germany", "value": "1111"}],
+        }
+    ]
+
+    updated = utils.rename_rows(annotated, {}, fetch=None)
+
+    assert updated == annotated

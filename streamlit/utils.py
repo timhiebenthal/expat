@@ -205,6 +205,71 @@ def apply_resolution(cities, picks):
     return final
 
 
+def picks_from(annotated, choices=None, fetch=None):
+    """Turn annotated rows plus the user's choices into ``{name: pick}``.
+
+    A pick is ``{"slug", "city_id"}`` or ``{"drop": True}``. A resolved row needs
+    no choice; an ambiguous row uses ``choices[name]["city_id"]``; an unresolved
+    row uses ``choices[name]["manual"]`` as a slug, or is dropped. The slug is
+    read from numbeo only for a chosen id, never for the whole candidate list.
+    """
+    from pipeline.lib.numbeo import canonical_slug
+
+    choices = choices or {}
+    picks = {}
+    for city in annotated:
+        name = city["name"]
+        choice = choices.get(name, {})
+        if choice.get("drop"):
+            picks[name] = {"drop": True}
+        elif city["state"] == "resolved":
+            city_id = city["matches"][0]["value"]
+            picks[name] = {
+                "slug": canonical_slug(city_id, fetch=fetch),
+                "city_id": city_id,
+            }
+        elif city["state"] == "ambiguous" and choice.get("city_id"):
+            city_id = choice["city_id"]
+            picks[name] = {
+                "slug": canonical_slug(city_id, fetch=fetch),
+                "city_id": city_id,
+            }
+        elif city["state"] == "unresolved":
+            manual = (choice.get("manual") or "").strip()
+            picks[name] = {"slug": manual or None, "city_id": None}
+        else:
+            picks[name] = {}
+    return picks
+
+
+def rename_rows(annotated, renames, fetch=None):
+    """Re-resolve rows the user renamed, returning the updated annotation.
+
+    A rename is a new name to match, not a label change: the row is resolved
+    again so the panel can tell whether it is still blocked.
+    """
+    from pipeline.lib.numbeo import resolve_city
+
+    updated = []
+    for city in annotated:
+        new_name = renames.get(city["name"])
+        if not new_name:
+            updated.append(city)
+            continue
+        outcome = resolve_city(
+            new_name, country=city.get("country") or None, fetch=fetch
+        )
+        updated.append(
+            {
+                **city,
+                "name": new_name,
+                "state": outcome.state,
+                "matches": outcome.matches,
+            }
+        )
+    return updated
+
+
 def editable_df_component(dict, object_name, expander=False):
     import pandas as pd
 

@@ -38,6 +38,10 @@ if "jobs_df" not in st.session_state:
         {"Job Title": ["Data Engineer"], "Years of Experience": [7]}
     )
 
+# Set on Submit; holds the annotated resolution while the panel is on screen.
+if "resolution" not in st.session_state:
+    st.session_state.resolution = None
+
 
 def retrieve_city_suggestions(form_dict):
     model = build_chat_model(temperature=0.2)
@@ -74,6 +78,103 @@ def retrieve_city_suggestions(form_dict):
     logging.info(f"Retrieved data of {len(cities)} cities.")
 
     return cities
+
+
+def _save_and_run(picks, annotated):
+    """Write the resolved rows, then run the pipeline - the happy path."""
+    rows = utils.apply_resolution(annotated, picks)
+    utils.save_config_to_duckdb(
+        city_df=pd.DataFrame(rows), jobs_df=st.session_state.jobs_df
+    )
+    save_success = st.success("Data saved successfully!")
+    time.sleep(1)
+    save_success.empty()
+    # city_suggestions is not reset, so the user can edit and resubmit.
+
+    if utils.run_pipeline():
+        st.switch_page("pages/Comparison.py")
+    else:
+        st.error("Something went wrong. Please check the logs for more information.")
+
+
+def _render_resolution_panel(annotated):
+    """The HITL surface: same page as the editor, its own widgets.
+
+    All the decision logic lives in ``utils``; this only renders and gathers
+    choices, which is what keeps it testable without driving the UI.
+    """
+    st.subheader("Resolution")
+    st.caption(
+        "Each city is matched to Numbeo's own listing. Anything that did not "
+        "match cleanly needs a quick decision below. Nothing is saved until you "
+        "confirm."
+    )
+
+    resolved = [c for c in annotated if c["state"] == "resolved"]
+    ambiguous = [c for c in annotated if c["state"] == "ambiguous"]
+    unresolved = [c for c in annotated if c["state"] == "unresolved"]
+
+    if resolved:
+        pairs = "\n".join(
+            f"- {c['name']} -> {c['matches'][0]['label']}" for c in resolved
+        )
+        st.success(f"Resolved:\n\n{pairs}")
+
+    choices = {}
+    if ambiguous:
+        st.warning(
+            f"{len(ambiguous)} name(s) match more than one place - pick the one you mean."
+        )
+        for city in ambiguous:
+            labels = [m["label"] for m in city["matches"]]
+            picked = st.radio(
+                f"Which **{city['name']}**?", labels, index=0, key=f"amb-{city['name']}"
+            )
+            choices[city["name"]] = {
+                "city_id": next(
+                    m["value"] for m in city["matches"] if m["label"] == picked
+                )
+            }
+
+    if unresolved:
+        st.warning(
+            f"Numbeo has no match for {len(unresolved)} name(s) - rename, paste a "
+            "slug, or remove."
+        )
+        for city in unresolved:
+            with st.expander(f"**{city['name']}** - no Numbeo match", expanded=True):
+                c1, c2, c3 = st.columns([2, 2, 1])
+                new_name = c1.text_input(
+                    "Rename", value=city["name"], key=f"ren-{city['name']}"
+                )
+                manual = c2.text_input(
+                    "or paste a Numbeo slug", key=f"slug-{city['name']}"
+                )
+                drop = c3.checkbox("Remove", key=f"drop-{city['name']}")
+                choices[city["name"]] = {
+                    "rename": new_name,
+                    "manual": manual,
+                    "drop": drop,
+                }
+
+    # A rename is a new name to resolve, so it is resolved now and the panel
+    # re-renders to say whether the city is still blocked.
+    renames = {
+        name: choice["rename"].strip()
+        for name, choice in choices.items()
+        if choice.get("rename") and choice["rename"].strip() != name
+    }
+    if renames:
+        st.session_state.resolution = utils.rename_rows(annotated, renames)
+        st.rerun()
+
+    blocked = bool(ambiguous or unresolved)
+    if st.button("Confirm and run pipeline", disabled=blocked, key="confirm"):
+        _save_and_run(utils.picks_from(annotated, choices), annotated)
+    if blocked:
+        st.caption(
+            "Confirm is disabled until every city is resolved. Nothing is written."
+        )
 
 
 with st.form("inputs") as form_inputs:
@@ -130,21 +231,15 @@ if st.session_state.city_suggestions:
 # Button outside the form
 if st.button("Submit Cities", disabled=st.session_state.city_suggestions is None):
     if st.session_state.city_suggestions:
-        utils.save_config_to_duckdb(
-            city_df=pd.DataFrame(st.session_state.city_suggestions),
-            jobs_df=st.session_state.jobs_df,
-        )
-        save_success = st.success(
-            "Data saved successfully!",
-        )  # TO DO: disable after a few seconds
-        time.sleep(1)
-        save_success.empty()
-        # We don't reset city_suggestions here to allow for editing and resubmission
+        annotated = utils.resolve_city_rows(st.session_state.city_suggestions)
+        st.session_state.resolution = annotated
+        # The happy path is unchanged: everything resolved means no panel.
+        if all(city["state"] == "resolved" for city in annotated):
+            _save_and_run(utils.picks_from(annotated), annotated)
     else:
         st.error("Please find cities first before submitting.")
 
-    success = utils.run_pipeline()
-    if success:
-        st.switch_page("pages/Comparison.py")
-    else:
-        st.error("Something went wrong. Please check the logs for more information.")
+# The panel only appears when something still needs the user's call.
+resolution = st.session_state.get("resolution")
+if resolution and any(city["state"] != "resolved" for city in resolution):
+    _render_resolution_panel(resolution)

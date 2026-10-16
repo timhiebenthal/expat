@@ -36,7 +36,7 @@ Resolve each submitted city to the slug Numbeo keys it under, in the Streamlit a
 - [x] Task 5: `load_city_slugs` / `resolve_city_rows` / `apply_resolution`
 
 ### Phase 4: App gate
-- [ ] Task 6: `Home.py` Submit gate + resolution panel
+- [x] Task 6: `Home.py` Submit gate + resolution panel
 - [ ] Task 7: throttle feedback + distinct "Access Restricted" logging
 
 ### Checkpoint: App
