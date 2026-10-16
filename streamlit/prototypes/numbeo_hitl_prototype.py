@@ -115,6 +115,10 @@ elif res:
     unresolved = [r for r in rows if r["state"] == "unresolved"]
 
     st.subheader("Resolution")
+    st.caption(
+        "Each city is matched to Numbeo's own listing. Anything that did not match "
+        "cleanly needs a quick decision below. Nothing is saved until you confirm."
+    )
     if resolved:
         pairs = "\n".join(
             f"- {r['name']} -> {slug_for(r['matches'][0]['value'])}"
@@ -124,7 +128,9 @@ elif res:
 
     # Deliberately NOT inside the data_editor above: these need widgets, not cells.
     if ambiguous:
-        st.warning(f"{len(ambiguous)} city name(s) match more than one place.")
+        st.warning(
+            f"{len(ambiguous)} name(s) match more than one place - pick the one you mean."
+        )
         for i, r in enumerate(ambiguous):
             options = [m["label"] for m in r["matches"]]
             choice = st.radio(
@@ -138,7 +144,9 @@ elif res:
             )
 
     if unresolved:
-        st.warning(f"{len(unresolved)} city name(s) match nothing.")
+        st.warning(
+            f"Numbeo has no match for {len(unresolved)} name(s) - rename, paste a slug, or remove."
+        )
         for i, r in enumerate(unresolved):
             with st.expander(f"**{r['name']}** - no Numbeo match", expanded=True):
                 c1, c2, c3 = st.columns([2, 2, 1])
