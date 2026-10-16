@@ -58,12 +58,16 @@ with
                 )
             ) as entity_id,
             earnings.*,
+            -- Multiply, never divide: conversion_rate is the close of Yahoo's
+            -- <local><EUR>=X, which quotes EUR per one unit of local currency.
+            -- dbt divided by it, which inverted every non-euro amount (and, at
+            -- today's rates, understated London by ~25%).
             round(
-                earnings.avg_monthly_gross_salary / forex.conversion_rate, 2
+                earnings.avg_monthly_gross_salary * forex.conversion_rate, 2
             ) as avg_monthly_gross_salary_eur,
             round(
                 (earnings.avg_monthly_gross_salary * earnings.net_to_gross_salary_ratio)
-                / forex.conversion_rate,
+                * forex.conversion_rate,
                 2
             ) as avg_monthly_net_salary_eur,
             printf(
