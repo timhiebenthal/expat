@@ -116,9 +116,11 @@ elif res:
 
     st.subheader("Resolution")
     if resolved:
-        st.success(
-            "Resolved: " + ", ".join(f"{r['name']} -> {slug_for(r['matches'][0]['value'])}" for r in resolved)
+        pairs = "\n".join(
+            f"- {r['name']} -> {slug_for(r['matches'][0]['value'])}"
+            for r in resolved
         )
+        st.success(f"Resolved:\n\n{pairs}")
 
     # Deliberately NOT inside the data_editor above: these need widgets, not cells.
     if ambiguous:
