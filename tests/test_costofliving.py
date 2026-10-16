@@ -234,3 +234,55 @@ def test_resolve_city_falls_back_to_the_bare_name_when_the_country_misses(numbeo
     assert result.state == "resolved"
     assert len(seen) == 2
     assert "Canada" in seen[0]
+
+
+class _TableResponse:
+    """A numbeo cost-of-living page carrying the real table."""
+
+    content = NUMBEO_TABLE.encode()
+
+    def raise_for_status(self):
+        pass
+
+
+def test_get_city_data_uses_a_stored_slug(numbeo):
+    """A resolved slug drives the URL; the display name only labels the rows."""
+    seen = {}
+
+    def fetch(url, **kwargs):
+        seen["url"] = url
+        return _TableResponse()
+
+    rows = numbeo.get_city_data("Tel Aviv", slug="Tel-Aviv-Yafo", fetch=fetch)
+
+    assert seen["url"] == "https://www.numbeo.com/cost-of-living/in/Tel-Aviv-Yafo"
+    # The name stays the identity; only the URL came from the slug.
+    assert rows[0]["city"] == "Tel Aviv"
+
+
+def test_get_city_data_falls_back_to_the_naive_slug_without_one(numbeo):
+    seen = {}
+
+    def fetch(url, **kwargs):
+        seen["url"] = url
+        return _TableResponse()
+
+    numbeo.get_city_data("Mexico City", fetch=fetch)
+
+    assert seen["url"].endswith("/Mexico-City")
+
+
+def test_get_city_data_flags_access_restricted_distinctly(numbeo, caplog):
+    """Throttling and 'no data' look identical on the page; the log must not."""
+    page = "<html><head><title>Access Restricted</title></head></html>"
+
+    class Response:
+        content = page.encode()
+
+        def raise_for_status(self):
+            pass
+
+    with caplog.at_level("WARNING"):
+        assert numbeo.get_city_data("Munich", fetch=lambda *a, **k: Response()) is None
+
+    assert "rate-limiting" in caplog.text

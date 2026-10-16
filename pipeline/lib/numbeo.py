@@ -20,6 +20,7 @@ REQUEST_TIMEOUT = 30
 CITY_SEARCH_URL = "https://www.numbeo.com/common/CitySearchJson"
 DISPATCHER_URL = "https://www.numbeo.com/common/dispatcher.jsp"
 NUMBEO_HOST = "https://www.numbeo.com"
+CITY_URL_BASE = "https://www.numbeo.com/cost-of-living/in"
 
 
 def parse_table_rows(table):
@@ -52,7 +53,7 @@ def build_city_url(city):
     The slug must stay the bare city name: appending the country ("Munich-Germany")
     is not a valid key and numbeo answers with an error page that carries no table.
     """
-    return f"https://www.numbeo.com/cost-of-living/in/{city.replace(' ', '-')}"
+    return f"{CITY_URL_BASE}/{city.replace(' ', '-')}"
 
 
 def search_cities(term, fetch=None):
@@ -123,14 +124,19 @@ def resolve_city(name, country=None, fetch=None):
     return Resolution("ambiguous", matches)
 
 
-def get_city_data(city, fetch=None):
+def get_city_data(city, slug=None, fetch=None):
     """Return ``[{"city": ..., "data": [...]}]``, or None when numbeo has no table.
+
+    ``slug`` is numbeo's canonical key for the city, resolved at the app boundary
+    and stored on the config row; when present it drives the URL and the display
+    name is only carried through. Without one the naive slug is used, which is
+    right for most cities but not all (Tel Aviv -> Tel-Aviv-Yafo).
 
     ``fetch`` defaults to ``requests.get`` and is resolved at call time, which is
     what lets a test monkeypatch it.
     """
     fetch = fetch or requests.get
-    url = build_city_url(city)
+    url = f"{CITY_URL_BASE}/{slug}" if slug else build_city_url(city)
     response = fetch(url, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
     soup = BeautifulSoup(response.content, "html.parser")
@@ -141,7 +147,14 @@ def get_city_data(city, fetch=None):
         # numbeo serves a 200 with an error page ("Cannot find city id for ...")
         # instead of the table, so the page title is the only diagnostic left.
         title = soup.title.text.strip() if soup.title else "no title"
-        logging.warning(f"No cost of living table at '{url}' - page says: {title}")
+        if "access restricted" in title.lower():
+            # Throttling, not a missing city. The two are indistinguishable on
+            # the page, so the log is the only place that can tell them apart.
+            logging.warning(
+                f"numbeo is rate-limiting us at '{url}' - page says: {title}"
+            )
+        else:
+            logging.warning(f"No cost of living table at '{url}' - page says: {title}")
         return None
 
     return [{"city": city, "data": table_data}]

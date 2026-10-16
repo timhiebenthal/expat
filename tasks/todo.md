@@ -47,16 +47,16 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 
 ## Task 3: `get_city_data` prefers a stored slug
 
-**Description:** Extend `get_city_data(city, slug=None, fetch=None)`. When `slug` is given, build the URL from it directly; otherwise keep the existing `build_city_url` + `SLUG_OVERRIDES` path. Keep the no-table warning, and add a distinct line when the title contains "Access Restricted".
+**Description:** Extend `get_city_data(city, slug=None, fetch=None)`. When `slug` is given, build the URL from it directly; otherwise keep the existing `build_city_url` naive slug. Keep the no-table warning, and add a distinct line when the title contains "Access Restricted".
 
 **Acceptance criteria:**
-- [ ] With a slug, the request URL is `/cost-of-living/in/<slug>` and the display name is irrelevant.
-- [ ] Without a slug, the naive + override path is used unchanged.
-- [ ] The error-page warning still fires, and "Access Restricted" is logged distinctly.
+- [x] With a slug, the request URL is `/cost-of-living/in/<slug>` and the display name is irrelevant.
+- [x] Without a slug, the naive slug path is used unchanged.
+- [x] The error-page warning still fires, and "Access Restricted" is logged distinctly.
 
 **Verification:**
-- [ ] `make test` passes.
-- [ ] `tests/test_costofliving.py`: stored-slug URL, fallback URL, throttle log.
+- [x] `make test` passes.
+- [x] `tests/test_costofliving.py`: stored-slug URL, fallback URL, throttle log.
 
 **Dependencies:** None (uses the existing `build_city_url`).
 **Files:** `pipeline/lib/numbeo.py`, `tests/test_costofliving.py`.

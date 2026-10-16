@@ -14,14 +14,14 @@ Resolve each submitted city to the slug Numbeo keys it under, in the Streamlit a
 - **The app gate is thin; the decision logic sits in `streamlit/utils.py`.** `Home.py` renders widgets, `utils` resolves and merges, so the logic is unit-testable without Streamlit - which matters because `AppTest` cannot drive `data_editor`.
 - **Tolerate the old `raw_config.cities` shape** (no slug columns) rather than migrate. The table is replaced wholesale on every Submit, so the old shape exists only until the first submit after deploy; a tolerant read is cheaper than a migration step. (Resolves spec Open Question 1.)
 - **No "force re-resolve" in v1.** Renaming a city re-resolves it. (Resolves spec Open Question 2.)
-- **`SLUG_OVERRIDES` stays** as the ingest-side fallback for legacy or non-app rows; it is no longer the primary mechanism.
+- **The naive slug is the fallback**, not a hardcoded override map. `SLUG_OVERRIDES` never landed on `main`, and an alias map would contradict the point of the feature; a row without a stored slug uses `build_city_url` and fails loudly if numbeo does not serve it.
 
 ## Task List
 
 ### Phase 1: Resolution library
 - [x] Task 1: `search_cities` + `canonical_slug`
 - [x] Task 2: `resolve_city` (three-way outcome + country filter)
-- [ ] Task 3: `get_city_data(city, slug=None)`
+- [x] Task 3: `get_city_data(city, slug=None)`
 
 ### Checkpoint: Library
 - [ ] `make test` passes; 0 / 1 / N matches, the country filter, and the malformed `Location` are covered
