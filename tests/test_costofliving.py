@@ -286,3 +286,59 @@ def test_get_city_data_flags_access_restricted_distinctly(numbeo, caplog):
         assert numbeo.get_city_data("Munich", fetch=lambda *a, **k: Response()) is None
 
     assert "rate-limiting" in caplog.text
+
+
+@pytest.fixture(scope="module")
+def ingest():
+    from pipeline.assets.ingest import numbeo as module
+
+    return module
+
+
+def _scratch_cities(tmp_path, *, with_slug):
+    """A scratch warehouse holding only raw_config.cities."""
+    import duckdb
+
+    db = tmp_path / "scratch.duckdb"
+    con = duckdb.connect(str(db))
+    con.execute("create schema raw_config")
+    if with_slug:
+        con.execute(
+            "create table raw_config.cities (name varchar, numbeo_slug varchar)"
+        )
+        con.execute("insert into raw_config.cities values ('Tel Aviv', 'Tel-Aviv-Yafo')")
+    else:
+        con.execute("create table raw_config.cities (name varchar)")
+        con.execute("insert into raw_config.cities values ('Munich')")
+    con.close()
+    return db
+
+
+def test_ingest_reads_the_stored_slug(tmp_path, monkeypatch, ingest):
+    monkeypatch.setenv("DUCKDB_LOCATION", str(_scratch_cities(tmp_path, with_slug=True)))
+
+    assert ingest.configured_cities() == [("Tel Aviv", "Tel-Aviv-Yafo")]
+
+
+def test_ingest_tolerates_a_table_without_the_slug_column(tmp_path, monkeypatch, ingest):
+    """A table written before the slug existed must not crash the ingest."""
+    monkeypatch.setenv(
+        "DUCKDB_LOCATION", str(_scratch_cities(tmp_path, with_slug=False))
+    )
+
+    assert ingest.configured_cities() == [("Munich", None)]
+
+
+def test_materialize_passes_the_slug_through(tmp_path, monkeypatch, ingest):
+    monkeypatch.setenv("DUCKDB_LOCATION", str(_scratch_cities(tmp_path, with_slug=True)))
+    seen = {}
+
+    def fake_get_city_data(city, slug=None, fetch=None):
+        seen[city] = slug
+        return [{"city": city, "data": [{"category": "Meal", "cost": "10"}]}]
+
+    monkeypatch.setattr(ingest, "get_city_data", fake_get_city_data)
+
+    ingest.materialize()
+
+    assert seen == {"Tel Aviv": "Tel-Aviv-Yafo"}

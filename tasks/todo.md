@@ -75,13 +75,13 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** `pipeline/assets/ingest/numbeo.py` reads `name` plus `numbeo_slug` from `raw_config.cities`, tolerating a table without the column (check `information_schema.columns`), and passes the slug to `get_city_data`.
 
 **Acceptance criteria:**
-- [ ] With the column present, each city's stored slug is used.
-- [ ] With the column absent, it falls back to the naive path and does not error.
-- [ ] The zero-rows `RuntimeError` guard is unchanged.
+- [x] With the column present, each city's stored slug is used.
+- [x] With the column absent, it falls back to the naive path and does not error.
+- [x] The zero-rows `RuntimeError` guard is unchanged.
 
 **Verification:**
-- [ ] `make test` passes; a fixture-warehouse unit test covers both shapes.
-- [ ] Manual: `bruin run pipeline/assets/ingest/numbeo.py --workers 1` against a scratch copy.
+- [x] `make test` passes; a fixture-warehouse unit test covers both shapes.
+- Deferred: a live `bruin run pipeline/assets/ingest/numbeo.py` - numbeo is rate-limiting this IP, so a live run would only exercise the throttle path (already unit-tested).
 
 **Dependencies:** Task 3.
 **Files:** `pipeline/assets/ingest/numbeo.py`, `tests/test_costofliving.py`.

@@ -27,10 +27,10 @@ Resolve each submitted city to the slug Numbeo keys it under, in the Streamlit a
 - [ ] `make test` passes; 0 / 1 / N matches, the country filter, and the malformed `Location` are covered
 
 ### Phase 2: Ingest
-- [ ] Task 4: ingest reads `numbeo_slug`, tolerates the old shape
+- [x] Task 4: ingest reads `numbeo_slug`, tolerates the old shape
 
 ### Checkpoint: Ingest
-- [ ] Stored slug preferred; naive fallback intact; zero-rows guard intact
+- [x] Stored slug preferred; naive fallback intact; zero-rows guard intact
 
 ### Phase 3: App helpers
 - [ ] Task 5: `load_city_slugs` / `resolve_city_rows` / `apply_resolution`
