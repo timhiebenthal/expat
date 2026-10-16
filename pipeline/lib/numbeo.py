@@ -5,12 +5,51 @@ caller can inject its own fetcher. Called by `pipeline/assets/ingest/numbeo.py`.
 """
 
 import logging
+from typing import NamedTuple
+from urllib.parse import quote_plus
 
 import requests
 from bs4 import BeautifulSoup
 
 TABLE_CLASS = "data_wide_table new_bar_table"
 REQUEST_TIMEOUT = 30
+
+# numbeo's own autocomplete and its city dispatcher. Both are internal - the site
+# uses them itself - but they are the only source of the canonical slug, which is
+# not derivable from the display name (Tel Aviv -> Tel-Aviv-Yafo).
+CITY_SEARCH_URL = "https://www.numbeo.com/common/CitySearchJson"
+DISPATCHER_URL = "https://www.numbeo.com/common/dispatcher.jsp"
+NUMBEO_HOST = "https://www.numbeo.com"
+CITY_URL_BASE = "https://www.numbeo.com/cost-of-living/in"
+
+
+class NumbeoThrottled(RuntimeError):
+    """numbeo is rate-limiting us instead of answering."""
+
+
+# numbeo signals a throttle two ways: a 429/403, or a 200 HTML "Access Restricted"
+# page. raise_for_status() turns the first into an opaque HTTPError, so the check
+# has to run before it.
+THROTTLE_STATUS = {403, 429}
+
+
+def _is_throttled(response):
+    """True when numbeo answered with its rate-limit page rather than data.
+
+    That page is a 200, so the status code says nothing and the body is the signal.
+    """
+    content = getattr(response, "content", b"") or b""
+    if isinstance(content, str):
+        content = content.encode()
+    return b"access restricted" in content.lower()
+
+
+def _raise_if_throttled(response, url):
+    """Raise NumbeoThrottled before raise_for_status can mask it as an HTTPError."""
+    if getattr(response, "status_code", 200) in THROTTLE_STATUS or _is_throttled(
+        response
+    ):
+        raise NumbeoThrottled(f"numbeo is rate-limiting us at '{url}'")
 
 
 def parse_table_rows(table):
@@ -43,18 +82,94 @@ def build_city_url(city):
     The slug must stay the bare city name: appending the country ("Munich-Germany")
     is not a valid key and numbeo answers with an error page that carries no table.
     """
-    return f"https://www.numbeo.com/cost-of-living/in/{city.replace(' ', '-')}"
+    return f"{CITY_URL_BASE}/{city.replace(' ', '-')}"
 
 
-def get_city_data(city, fetch=None):
+def search_cities(term, fetch=None):
+    """Ask numbeo's autocomplete which cities match ``term``.
+
+    Returns the raw ``[{"label": ..., "value": ...}]`` list, where ``value`` is
+    numbeo's city_id, or ``[]`` when nothing matches.
+    """
+    fetch = fetch or requests.get
+    url = f"{CITY_SEARCH_URL}?term={quote_plus(term)}"
+    response = fetch(url, timeout=REQUEST_TIMEOUT)
+    _raise_if_throttled(response, url)
+    response.raise_for_status()
+    return response.json()
+
+
+def canonical_slug(city_id, fetch=None):
+    """The slug numbeo keys ``city_id`` under, or None if it cannot be read.
+
+    The dispatcher answers with a 302 whose Location is malformed - the slug is
+    appended to the host with no slash, e.g.
+    ``https://www.numbeo.comTel-Aviv-Yafo``. The slug is still canonical, so it
+    is parsed out defensively rather than treated as a URL.
+    """
+    fetch = fetch or requests.get
+    url = f"{DISPATCHER_URL}?city_id={city_id}"
+    response = fetch(url, timeout=REQUEST_TIMEOUT, allow_redirects=False)
+    _raise_if_throttled(response, url)
+    response.raise_for_status()
+
+    location = response.headers.get("Location", "")
+    if not location.startswith(NUMBEO_HOST):
+        return None
+    slug = location[len(NUMBEO_HOST):].strip("/").split("/")[-1]
+    return slug or None
+
+
+class Resolution(NamedTuple):
+    """The outcome of matching a display name to numbeo cities.
+
+    ``state`` is "resolved" (exactly one), "ambiguous" (several - the app asks),
+    or "unresolved" (none). ``matches`` are numbeo's own ``{label, value}`` dicts.
+    """
+
+    state: str
+    matches: list
+
+
+def resolve_city(name, country=None, fetch=None):
+    """Match a display name to numbeo's cities, narrowing by country.
+
+    The country is only a hint: numbeo's naming may differ from the caller's
+    ("USA" vs "United States"), so a qualified search that finds nothing is
+    retried with the bare name.
+    """
+    matches = search_cities(f"{name}, {country}" if country else name, fetch=fetch)
+    if not matches and country:
+        matches = search_cities(name, fetch=fetch)
+
+    if not matches:
+        return Resolution("unresolved", [])
+    if len(matches) == 1:
+        return Resolution("resolved", matches)
+
+    if country:
+        narrowed = [m for m in matches if country.lower() in m["label"].lower()]
+        if len(narrowed) == 1:
+            return Resolution("resolved", narrowed)
+
+    return Resolution("ambiguous", matches)
+
+
+def get_city_data(city, slug=None, fetch=None):
     """Return ``[{"city": ..., "data": [...]}]``, or None when numbeo has no table.
+
+    ``slug`` is numbeo's canonical key for the city, resolved at the app boundary
+    and stored on the config row; when present it drives the URL and the display
+    name is only carried through. Without one the naive slug is used, which is
+    right for most cities but not all (Tel Aviv -> Tel-Aviv-Yafo).
 
     ``fetch`` defaults to ``requests.get`` and is resolved at call time, which is
     what lets a test monkeypatch it.
     """
     fetch = fetch or requests.get
-    url = build_city_url(city)
+    url = f"{CITY_URL_BASE}/{slug}" if slug else build_city_url(city)
     response = fetch(url, timeout=REQUEST_TIMEOUT)
+    _raise_if_throttled(response, url)
     response.raise_for_status()
     soup = BeautifulSoup(response.content, "html.parser")
     table = soup.find("table", class_=TABLE_CLASS)
@@ -63,6 +178,7 @@ def get_city_data(city, fetch=None):
     if not table_data:
         # numbeo serves a 200 with an error page ("Cannot find city id for ...")
         # instead of the table, so the page title is the only diagnostic left.
+        # Throttling was already caught above, so this is a genuinely missing city.
         title = soup.title.text.strip() if soup.title else "no title"
         logging.warning(f"No cost of living table at '{url}' - page says: {title}")
         return None

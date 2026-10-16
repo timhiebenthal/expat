@@ -86,3 +86,317 @@ def test_error_page_without_a_table_is_reported(numbeo, monkeypatch, caplog):
         assert numbeo.get_city_data("Nowhere") is None
 
     assert "Cannot find city id for Nowhere" in caplog.text
+
+
+class _JsonResponse:
+    """A stand-in for requests' response, exposing only what search_cities uses."""
+
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._payload
+
+
+class _RedirectResponse:
+    """A stand-in for the dispatcher's 302, exposing only headers."""
+
+    def __init__(self, location):
+        self.headers = {} if location is None else {"Location": location}
+
+    def raise_for_status(self):
+        pass
+
+
+def test_search_cities_returns_the_matches(numbeo):
+    """The autocomplete's value is numbeo's city_id, and it stays a string."""
+    seen = {}
+
+    def fetch(url, **kwargs):
+        seen["url"] = url
+        return _JsonResponse([{"label": "Tel Aviv-Yafo, Israel", "value": "6845"}])
+
+    matches = numbeo.search_cities("Tel Aviv", fetch=fetch)
+
+    assert matches == [{"label": "Tel Aviv-Yafo, Israel", "value": "6845"}]
+    assert "CitySearchJson" in seen["url"]
+    assert "Tel" in seen["url"]
+
+
+def test_search_cities_returns_empty_when_nothing_matches(numbeo):
+    assert (
+        numbeo.search_cities("Nowhereville", fetch=lambda *a, **k: _JsonResponse([]))
+        == []
+    )
+
+
+def test_canonical_slug_parses_the_malformed_location(numbeo):
+    """The dispatcher's Location has no slash: 'https://www.numbeo.com<slug>'."""
+    seen = {}
+
+    def fetch(url, **kwargs):
+        seen.update(kwargs)
+        seen["url"] = url
+        return _RedirectResponse("https://www.numbeo.comTel-Aviv-Yafo")
+
+    slug = numbeo.canonical_slug("6845", fetch=fetch)
+
+    assert slug == "Tel-Aviv-Yafo"
+    # Redirects must not be followed, or the slug is lost to the followed page.
+    assert seen["allow_redirects"] is False
+    assert "city_id=6845" in seen["url"]
+
+
+def test_canonical_slug_returns_none_when_it_cannot_parse(numbeo):
+    assert (
+        numbeo.canonical_slug(
+            "6845", fetch=lambda *a, **k: _RedirectResponse("https://example.com/nope")
+        )
+        is None
+    )
+    assert (
+        numbeo.canonical_slug("6845", fetch=lambda *a, **k: _RedirectResponse(None))
+        is None
+    )
+
+
+LONDONS = [
+    {"label": "London, United Kingdom", "value": "1000"},
+    {"label": "London, Canada", "value": "2000"},
+]
+
+
+def test_resolve_city_is_unresolved_when_nothing_matches(numbeo):
+    result = numbeo.resolve_city(
+        "Nowhereville", fetch=lambda *a, **k: _JsonResponse([])
+    )
+
+    assert result.state == "unresolved"
+    assert result.matches == []
+
+
+def test_resolve_city_is_resolved_on_a_single_match(numbeo):
+    result = numbeo.resolve_city(
+        "Munich",
+        fetch=lambda *a, **k: _JsonResponse([{"label": "Munich, Germany", "value": "1111"}]),
+    )
+
+    assert result.state == "resolved"
+    assert result.matches[0]["value"] == "1111"
+
+
+def test_resolve_city_is_ambiguous_on_several_matches(numbeo):
+    result = numbeo.resolve_city(
+        "London", fetch=lambda *a, **k: _JsonResponse(LONDONS)
+    )
+
+    assert result.state == "ambiguous"
+    assert len(result.matches) == 2
+
+
+def test_resolve_city_narrows_several_matches_by_country(numbeo):
+    result = numbeo.resolve_city(
+        "London", country="Canada", fetch=lambda *a, **k: _JsonResponse(LONDONS)
+    )
+
+    assert result.state == "resolved"
+    assert result.matches == [{"label": "London, Canada", "value": "2000"}]
+
+
+def test_resolve_city_qualifies_the_search_with_the_country(numbeo):
+    seen = []
+
+    def fetch(url, **kwargs):
+        seen.append(url)
+        return _JsonResponse([{"label": "Munich, Germany", "value": "1111"}])
+
+    numbeo.resolve_city("Munich", country="Germany", fetch=fetch)
+
+    assert len(seen) == 1
+    assert "Germany" in seen[0]
+
+
+def test_resolve_city_falls_back_to_the_bare_name_when_the_country_misses(numbeo):
+    """An LLM country ("USA") may not match numbeo's naming ("United States")."""
+    seen = []
+
+    def fetch(url, **kwargs):
+        seen.append(url)
+        if "Canada" in url:
+            return _JsonResponse([])
+        return _JsonResponse([{"label": "Munich, Germany", "value": "1111"}])
+
+    result = numbeo.resolve_city("Munich", country="Canada", fetch=fetch)
+
+    assert result.state == "resolved"
+    assert len(seen) == 2
+    assert "Canada" in seen[0]
+
+
+class _TableResponse:
+    """A numbeo cost-of-living page carrying the real table."""
+
+    content = NUMBEO_TABLE.encode()
+
+    def raise_for_status(self):
+        pass
+
+
+def test_get_city_data_uses_a_stored_slug(numbeo):
+    """A resolved slug drives the URL; the display name only labels the rows."""
+    seen = {}
+
+    def fetch(url, **kwargs):
+        seen["url"] = url
+        return _TableResponse()
+
+    rows = numbeo.get_city_data("Tel Aviv", slug="Tel-Aviv-Yafo", fetch=fetch)
+
+    assert seen["url"] == "https://www.numbeo.com/cost-of-living/in/Tel-Aviv-Yafo"
+    # The name stays the identity; only the URL came from the slug.
+    assert rows[0]["city"] == "Tel Aviv"
+
+
+def test_get_city_data_falls_back_to_the_naive_slug_without_one(numbeo):
+    seen = {}
+
+    def fetch(url, **kwargs):
+        seen["url"] = url
+        return _TableResponse()
+
+    numbeo.get_city_data("Mexico City", fetch=fetch)
+
+    assert seen["url"].endswith("/Mexico-City")
+
+
+def test_get_city_data_raises_when_the_page_says_access_restricted(numbeo):
+    """A 200 'Access Restricted' page is a throttle, not a missing city.
+
+    It used to be logged and treated as no data, which the ingest then reported
+    as a missing city - the two are indistinguishable on the page, so the
+    exception is the only thing that tells them apart.
+    """
+    page = "<html><head><title>Access Restricted</title></head></html>"
+
+    class Response:
+        content = page.encode()
+
+        def raise_for_status(self):
+            pass
+
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.get_city_data("Munich", fetch=lambda *a, **k: Response())
+
+
+@pytest.fixture(scope="module")
+def ingest():
+    from pipeline.assets.ingest import numbeo as module
+
+    return module
+
+
+def _scratch_cities(tmp_path, *, with_slug):
+    """A scratch warehouse holding only raw_config.cities."""
+    import duckdb
+
+    db = tmp_path / "scratch.duckdb"
+    con = duckdb.connect(str(db))
+    con.execute("create schema raw_config")
+    if with_slug:
+        con.execute(
+            "create table raw_config.cities (name varchar, numbeo_slug varchar)"
+        )
+        con.execute("insert into raw_config.cities values ('Tel Aviv', 'Tel-Aviv-Yafo')")
+    else:
+        con.execute("create table raw_config.cities (name varchar)")
+        con.execute("insert into raw_config.cities values ('Munich')")
+    con.close()
+    return db
+
+
+def test_ingest_reads_the_stored_slug(tmp_path, monkeypatch, ingest):
+    monkeypatch.setenv("DUCKDB_LOCATION", str(_scratch_cities(tmp_path, with_slug=True)))
+
+    assert ingest.configured_cities() == [("Tel Aviv", "Tel-Aviv-Yafo")]
+
+
+def test_ingest_tolerates_a_table_without_the_slug_column(tmp_path, monkeypatch, ingest):
+    """A table written before the slug existed must not crash the ingest."""
+    monkeypatch.setenv(
+        "DUCKDB_LOCATION", str(_scratch_cities(tmp_path, with_slug=False))
+    )
+
+    assert ingest.configured_cities() == [("Munich", None)]
+
+
+def test_materialize_passes_the_slug_through(tmp_path, monkeypatch, ingest):
+    monkeypatch.setenv("DUCKDB_LOCATION", str(_scratch_cities(tmp_path, with_slug=True)))
+    seen = {}
+
+    def fake_get_city_data(city, slug=None, fetch=None):
+        seen[city] = slug
+        return [{"city": city, "data": [{"category": "Meal", "cost": "10"}]}]
+
+    monkeypatch.setattr(ingest, "get_city_data", fake_get_city_data)
+
+    ingest.materialize()
+
+    assert seen == {"Tel Aviv": "Tel-Aviv-Yafo"}
+
+
+def test_search_cities_raises_when_numbeo_throttles(numbeo):
+    """numbeo answers a throttle with a 200 HTML page, not JSON."""
+
+    class Response:
+        content = b"<html><head><title>Access Restricted</title></head></html>"
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            raise ValueError("not json")
+
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.search_cities("Munich", fetch=lambda *a, **k: Response())
+
+
+def test_canonical_slug_raises_when_numbeo_throttles(numbeo):
+    class Response:
+        content = b"<html><head><title>Access Restricted</title></head></html>"
+        headers = {}
+
+        def raise_for_status(self):
+            pass
+
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.canonical_slug("1111", fetch=lambda *a, **k: Response())
+
+
+class _TooManyRequests:
+    """numbeo's other throttle signal: a bare 429 with no HTML body."""
+
+    status_code = 429
+    content = b""
+    headers = {}
+
+    def raise_for_status(self):
+        raise AssertionError("a 429 must be caught before raise_for_status")
+
+
+def test_search_cities_raises_on_429(numbeo):
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.search_cities("Berlin", fetch=lambda *a, **k: _TooManyRequests())
+
+
+def test_canonical_slug_raises_on_429(numbeo):
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.canonical_slug("1111", fetch=lambda *a, **k: _TooManyRequests())
+
+
+def test_get_city_data_raises_on_429(numbeo):
+    """This is the one that took the whole ingest down: raise_for_status first."""
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.get_city_data("Berlin", fetch=lambda *a, **k: _TooManyRequests())
