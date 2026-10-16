@@ -21,7 +21,7 @@ One capability, not several: a capability map would split a vertical slice whose
 
 ## Design decisions
 
-Settled in the grilling session, with a prototype for the counting model. The prototype is `streamlit/prototypes/household-member-counts.prototype.html`; its pure counting functions are the source of the verified numbers below (couple, untouched: EUR 1,488 other monthly cost, EUR 2,688 with rent; single: EUR 984 / EUR 2,184).
+Settled in the grilling session, with a prototype for the counting model. The prototype lives on the `prototype/household-counts` branch rather than in this tree; its pure counting functions are the source of the verified numbers below (couple, untouched: EUR 1,488 other monthly cost, EUR 2,688 with rent; single: EUR 984 / EUR 2,184).
 
 1. **A couple is a Household of two Members, chosen in the entry mask.** Jobs never determine the Member count. Two Members with one income is the trailing-partner case and must be expressible; one person with two jobs must not become a household of two.
 2. **Frequency is a Household total.** Its default opens at `seed_count x Members` for a Per-person cost item and at `seed_count` for a Shared one. The analysis arithmetic is unchanged: price x count, summed per city. Nothing is materialised per Member, and there is no Member dimension anywhere.
@@ -71,7 +71,7 @@ streamlit/utils.py                               settings read/write, typed acce
 streamlit/Home.py                                Single / Couple in the entry mask
 streamlit/pages/Comparison.py                    derived defaults, labels, totals
 streamlit/household.py                           NEW: pure counting functions
-streamlit/prototypes/household-member-counts.prototype.html   throwaway, kept as evidence
+streamlit/prototypes/                            gone; the prototype is on its own branch
 tests/test_household.py                          NEW
 tests/test_comparison_page.py                    extended
 ```
@@ -178,4 +178,4 @@ None outstanding. Anything discovered during the build that contradicts this spe
 
 - **The seed column is `counted_for`, not `frequency_basis`**, with values `person` and `household`. It states whose count it is, which is what it does, and it lines up with the Per-person and Shared cost item terms already in the glossary.
 - **The Member count is prefilled, not gathered.** Switching to Couple adds a second empty job row as an affordance; the count itself comes from the selector, so an empty row is never mistaken for a Member.
-- **The prototype's `module.exports` hook stays.** It is what let the counting functions be exercised outside a browser, and it costs one line.
+- **The prototype keeps its `module.exports` hook.** It is what let the counting functions be exercised outside a browser while the numbers were being settled, and the file now lives on the branch that keeps it.

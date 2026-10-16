@@ -80,19 +80,19 @@ Task 3 both reads Task 1's column and writes between Tasks 2 and 4; nothing else
 ### Phase 5: Guards and capture
 
 - [x] Task 6 `[quality]` The unknown Cost group check, seen failing
-- [ ] Task 7 `[docs]` Capture the prototype, retire the README line
+- [x] Task 7 `[docs]` Capture the prototype, retire the README line
 
 ### Checkpoint E: Complete
 
-- [ ] Every Success Criterion in `SPEC.md` holds
-- [ ] The check has been observed failing on a deliberately unknown Cost group
-- [ ] `make test` passes and the SQL is formatted
+- [x] Every Success Criterion in `SPEC.md` holds, two of them at code level rather than against a running system: the table's header text is canvas-rendered, and the pipeline run behind Submit needs an API key this worktree does not have. Both are recorded in the task's own verification lines
+- [x] The check has been observed failing on a deliberately unknown Cost group
+- [x] `make test` passes and the SQL is formatted
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Streamlit's widget identity silently drops an edited count when its default changes | High - the app quietly loses the user's numbers | Keyed `number_input`s plus a session-state record of which counts were edited; an `AppTest` rerun that changes a value and re-renders proves it survives |
+| Streamlit's widget identity silently drops an edited count when its default changes | High - the app quietly loses the user's numbers | Keyed `number_input`s plus a session-state record of the default each count was last derived at, which is what tells an edit from a household that moved; an `AppTest` rerun that changes a value and re-renders proves it survives |
 | The current `max_value=50` blocks a couple's water default of 60 | High - the page raises instead of rendering | Raise the ceiling to 400 and assert a 60 default renders |
 | Adding the column changes what the seed means, and a single person's numbers move | High - silent regression for the main use case | One Member is the regression test: every default asserted unchanged, item by item, in Task 2 |
 | A new Numbeo Cost group arrives and is silently treated as Household | Medium - understated costs, in every city equally, so it looks correct | The check from Task 6, attached to `core__activity`, seen failing before it is trusted |

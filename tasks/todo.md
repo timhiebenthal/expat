@@ -236,15 +236,15 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 **Description:** The prototype answered its question, so it leaves the feature tree and becomes a primary source on a throwaway branch, with `SPEC.md` pointing at that branch instead of at the path. The README's couple item is done.
 
 **Acceptance criteria:**
-- [ ] The prototype commit is reachable from a `prototype/household-counts` branch
-- [ ] `streamlit/prototypes/` no longer exists on the feature branch, and `SPEC.md` names the branch where the prototype lives
-- [ ] The README's "allow for multi-select in jobs to simulate couple / group" line is gone, and nothing else in the README changes
-- [ ] The counting functions it proved live in `streamlit/household.py`, not only in the prototype
+- [x] The prototype commit is reachable from a `prototype/household-counts` branch
+- [x] `streamlit/prototypes/` no longer exists on the feature branch, and `SPEC.md` names the branch where the prototype lives
+- [x] The README's "allow for multi-select in jobs to simulate couple / group" line is gone, and nothing else in the README changes
+- [x] The counting functions it proved live in `streamlit/household.py`, not only in the prototype
 
 **Verification:**
-- [ ] `git log --oneline prototype/household-counts` shows the prototype
-- [ ] `git ls-tree -r --name-only feature/couples | grep prototypes` returns nothing
-- [ ] `make test` passes
+- [x] `git log --oneline prototype/household-counts` shows the prototype
+- [x] `git ls-tree -r --name-only feature/couples | grep prototypes` returns nothing
+- [x] `make test` passes
 
 **Dependencies:** Task 3 (the functions have to be in the real module first), Task 4, Task 5
 

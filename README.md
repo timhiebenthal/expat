@@ -40,5 +40,4 @@ uv tool install harlequin
 ### Potential Features / To Do List:
 
 - integrate other cost of living beyond rent
-- allow for multi-select in jobs to simulate couple / group
 - let LLM find fitting cities for you
