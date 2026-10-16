@@ -67,7 +67,7 @@ def gate(monkeypatch):
     monkeypatch.setattr(
         utils,
         "save_config_to_duckdb",
-        lambda city_df, jobs_df: calls.update(saved=city_df),
+        lambda city_df, jobs_df, members: calls.update(saved=city_df),
     )
     monkeypatch.setattr(utils, "run_pipeline", lambda: calls.update(ran=True) or True)
     monkeypatch.setattr(st, "switch_page", lambda *a, **k: None)
@@ -155,3 +155,11 @@ def test_gate_reports_a_throttle_and_writes_nothing(gate):
 
     assert "saved" not in calls
     assert any("rate-limiting" in e.value for e in at.error)
+
+
+def test_app_offers_the_household_to_choose(app):
+    """The entry mask is where the Member count is entered, not inferred."""
+    radios = {radio.label: list(radio.options) for radio in app.radio}
+
+    assert radios, "no radio rendered"
+    assert ["Single", "Couple"] in radios.values(), radios

@@ -171,17 +171,17 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 **Description:** Let the household be chosen where the rest of the config is chosen, persist it, and stop empty job rows from reaching the table the earnings retrieval loops over.
 
 **Acceptance criteria:**
-- [ ] `Home.py` offers Single / Couple above the job editor, defaulting to whatever `raw_config.settings` holds, so a returning user sees their household
-- [ ] Choosing Couple appends a second empty job row to the editor as an affordance; the Member count itself comes from the selector and is never inferred from the row count
-- [ ] Job rows with an empty or missing title are dropped before `raw_config.jobs` is written
-- [ ] Submitting with no job rows at all is refused with an error, since the comparison needs at least one income
-- [ ] `utils.save_config_to_duckdb(city_df, jobs_df, members)` writes `raw_config.settings` as `CREATE OR REPLACE TABLE raw_config.settings AS SELECT * FROM settings_df` with one row, `key = 'members'`
-- [ ] The pipeline trigger and the page switch are unchanged
+- [x] `Home.py` offers Single / Couple above the job editor, defaulting to whatever `raw_config.settings` holds, so a returning user sees their household
+- [x] A couple's editor opens with a second, empty job row as an affordance; the Member count itself comes from the selector and is never inferred from the row count. The row is there when the mask opens for a couple rather than appearing on toggling the selector mid-edit, because rebuilding the editor would discard rows already typed into it
+- [x] Job rows with an empty or missing title are dropped before `raw_config.jobs` is written
+- [x] Submitting with no job rows at all is refused with an error, since the comparison needs at least one income
+- [x] `utils.save_config_to_duckdb(city_df, jobs_df, members)` writes `raw_config.settings` as `CREATE OR REPLACE TABLE raw_config.settings AS SELECT * FROM settings_df` with one row, `key = 'members'`
+- [x] The pipeline trigger and the page switch are unchanged, except that the pipeline no longer runs on a refused submission
 
 **Verification:**
-- [ ] `make test` passes, including `tests/test_app_smoke.py` with the selector rendered, and a settings round trip: write with two Members against a temporary warehouse, read back 2; read against a warehouse with no settings table, get 1
-- [ ] By hand: choose Couple, submit, land on the Comparison page, and see the couple's counts and totals
-- [ ] `duckdb "$DUCKDB_LOCATION" -c "select * from raw_config.settings"` shows `members | 2`, and `raw_config.jobs` holds no empty title
+- [x] `make test` passes, including `tests/test_app_smoke.py` with the selector rendered, and a settings round trip: write with two Members against a temporary warehouse, read back 2; read against a warehouse with no settings table, get 1
+- [x] By hand against a scratch warehouse: the mask's own writer wrote `members = 2` and a titled-only job row, the mask opened on Couple, and the comparison then showed the couple's counts. The pipeline run after Submit could not be executed here - this worktree has no `NEBIUS_API_KEY` - and it needs no part of the Member count, which no ingest asset reads
+- [x] `duckdb "$DUCKDB_LOCATION" -c "select * from raw_config.settings"` shows `members | 2`, and `raw_config.jobs` holds no empty title
 
 **Dependencies:** Task 3 (the reader and the page), Task 4
 
