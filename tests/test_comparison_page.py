@@ -384,6 +384,17 @@ def test_the_job_selection_moves_income_only(warehouse_copy, render_page):
     ).all()
 
 
+def test_rent_does_not_move_with_the_household(warehouse_copy, render_page):
+    """A second Member costs no extra rent: the location is one choice, not two."""
+    one = render_page(warehouse_copy, members=1).dataframe[0].value.set_index("city_name")
+    two = render_page(warehouse_copy, members=2).dataframe[0].value.set_index("city_name")
+
+    assert (one["monthly_rent_eur"] == two["monthly_rent_eur"]).all()
+    assert (two["other_monthly_cost_eur"] > one["other_monthly_cost_eur"]).all(), (
+        "the household did not change the costs at all, so this proves nothing"
+    )
+
+
 def test_a_warehouse_without_the_basis_column_says_so(warehouse_copy, render_page):
     """Failing loudly is right; failing with a pandas KeyError is not."""
     drop_basis_column(warehouse_copy)
