@@ -86,3 +86,78 @@ def test_error_page_without_a_table_is_reported(numbeo, monkeypatch, caplog):
         assert numbeo.get_city_data("Nowhere") is None
 
     assert "Cannot find city id for Nowhere" in caplog.text
+
+
+class _JsonResponse:
+    """A stand-in for requests' response, exposing only what search_cities uses."""
+
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._payload
+
+
+class _RedirectResponse:
+    """A stand-in for the dispatcher's 302, exposing only headers."""
+
+    def __init__(self, location):
+        self.headers = {} if location is None else {"Location": location}
+
+    def raise_for_status(self):
+        pass
+
+
+def test_search_cities_returns_the_matches(numbeo):
+    """The autocomplete's value is numbeo's city_id, and it stays a string."""
+    seen = {}
+
+    def fetch(url, **kwargs):
+        seen["url"] = url
+        return _JsonResponse([{"label": "Tel Aviv-Yafo, Israel", "value": "6845"}])
+
+    matches = numbeo.search_cities("Tel Aviv", fetch=fetch)
+
+    assert matches == [{"label": "Tel Aviv-Yafo, Israel", "value": "6845"}]
+    assert "CitySearchJson" in seen["url"]
+    assert "Tel" in seen["url"]
+
+
+def test_search_cities_returns_empty_when_nothing_matches(numbeo):
+    assert (
+        numbeo.search_cities("Nowhereville", fetch=lambda *a, **k: _JsonResponse([]))
+        == []
+    )
+
+
+def test_canonical_slug_parses_the_malformed_location(numbeo):
+    """The dispatcher's Location has no slash: 'https://www.numbeo.com<slug>'."""
+    seen = {}
+
+    def fetch(url, **kwargs):
+        seen.update(kwargs)
+        seen["url"] = url
+        return _RedirectResponse("https://www.numbeo.comTel-Aviv-Yafo")
+
+    slug = numbeo.canonical_slug("6845", fetch=fetch)
+
+    assert slug == "Tel-Aviv-Yafo"
+    # Redirects must not be followed, or the slug is lost to the followed page.
+    assert seen["allow_redirects"] is False
+    assert "city_id=6845" in seen["url"]
+
+
+def test_canonical_slug_returns_none_when_it_cannot_parse(numbeo):
+    assert (
+        numbeo.canonical_slug(
+            "6845", fetch=lambda *a, **k: _RedirectResponse("https://example.com/nope")
+        )
+        is None
+    )
+    assert (
+        numbeo.canonical_slug("6845", fetch=lambda *a, **k: _RedirectResponse(None))
+        is None
+    )

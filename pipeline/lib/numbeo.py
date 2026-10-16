@@ -5,12 +5,20 @@ caller can inject its own fetcher. Called by `pipeline/assets/ingest/numbeo.py`.
 """
 
 import logging
+from urllib.parse import quote_plus
 
 import requests
 from bs4 import BeautifulSoup
 
 TABLE_CLASS = "data_wide_table new_bar_table"
 REQUEST_TIMEOUT = 30
+
+# numbeo's own autocomplete and its city dispatcher. Both are internal - the site
+# uses them itself - but they are the only source of the canonical slug, which is
+# not derivable from the display name (Tel Aviv -> Tel-Aviv-Yafo).
+CITY_SEARCH_URL = "https://www.numbeo.com/common/CitySearchJson"
+DISPATCHER_URL = "https://www.numbeo.com/common/dispatcher.jsp"
+NUMBEO_HOST = "https://www.numbeo.com"
 
 
 def parse_table_rows(table):
@@ -44,6 +52,39 @@ def build_city_url(city):
     is not a valid key and numbeo answers with an error page that carries no table.
     """
     return f"https://www.numbeo.com/cost-of-living/in/{city.replace(' ', '-')}"
+
+
+def search_cities(term, fetch=None):
+    """Ask numbeo's autocomplete which cities match ``term``.
+
+    Returns the raw ``[{"label": ..., "value": ...}]`` list, where ``value`` is
+    numbeo's city_id, or ``[]`` when nothing matches.
+    """
+    fetch = fetch or requests.get
+    url = f"{CITY_SEARCH_URL}?term={quote_plus(term)}"
+    response = fetch(url, timeout=REQUEST_TIMEOUT)
+    response.raise_for_status()
+    return response.json()
+
+
+def canonical_slug(city_id, fetch=None):
+    """The slug numbeo keys ``city_id`` under, or None if it cannot be read.
+
+    The dispatcher answers with a 302 whose Location is malformed - the slug is
+    appended to the host with no slash, e.g.
+    ``https://www.numbeo.comTel-Aviv-Yafo``. The slug is still canonical, so it
+    is parsed out defensively rather than treated as a URL.
+    """
+    fetch = fetch or requests.get
+    url = f"{DISPATCHER_URL}?city_id={city_id}"
+    response = fetch(url, timeout=REQUEST_TIMEOUT, allow_redirects=False)
+    response.raise_for_status()
+
+    location = response.headers.get("Location", "")
+    if not location.startswith(NUMBEO_HOST):
+        return None
+    slug = location[len(NUMBEO_HOST):].strip("/").split("/")[-1]
+    return slug or None
 
 
 def get_city_data(city, fetch=None):

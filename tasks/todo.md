@@ -12,13 +12,13 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** Add `search_cities(term, fetch=None)` and `canonical_slug(city_id, fetch=None)` to `pipeline/lib/numbeo.py`. `search_cities` GETs `https://www.numbeo.com/common/CitySearchJson?term=<term>` and returns the parsed `[{"label", "value"}]` list, `[]` on no match. `canonical_slug` GETs `.../common/dispatcher.jsp?city_id=<id>` with redirects NOT followed, and parses the malformed `Location` (`https://www.numbeo.com<slug>`, no slash) defensively: strip the prefix, strip leading slashes, take the last path segment.
 
 **Acceptance criteria:**
-- [ ] `search_cities` returns `[{"label": ..., "value": ...}]`, and `[]` for an empty result.
-- [ ] `canonical_slug` returns the slug from `Location` for the malformed form, and `None` (not a crash) on an unparseable one.
-- [ ] Both take an injectable `fetch`; no test touches the network.
+- [x] `search_cities` returns `[{"label": ..., "value": ...}]`, and `[]` for an empty result.
+- [x] `canonical_slug` returns the slug from `Location` for the malformed form, and `None` (not a crash) on an unparseable one.
+- [x] Both take an injectable `fetch`; no test touches the network.
 
 **Verification:**
-- [ ] `make test` passes.
-- [ ] `tests/test_costofliving.py::test_search_cities_parses_matches` and `::test_canonical_slug_parses_the_malformed_location` pass.
+- [x] `make test` passes.
+- [x] `tests/test_costofliving.py::test_search_cities_returns_the_matches` and `::test_canonical_slug_parses_the_malformed_location` pass.
 
 **Dependencies:** None.
 **Files:** `pipeline/lib/numbeo.py`, `tests/test_costofliving.py`.

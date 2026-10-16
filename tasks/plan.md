@@ -19,7 +19,7 @@ Resolve each submitted city to the slug Numbeo keys it under, in the Streamlit a
 ## Task List
 
 ### Phase 1: Resolution library
-- [ ] Task 1: `search_cities` + `canonical_slug`
+- [x] Task 1: `search_cities` + `canonical_slug`
 - [ ] Task 2: `resolve_city` (three-way outcome + country filter)
 - [ ] Task 3: `get_city_data(city, slug=None)`
 
