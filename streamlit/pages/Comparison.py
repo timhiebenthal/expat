@@ -3,10 +3,15 @@ import duckdb
 import os
 import altair as alt
 import utils
+import household
 import sys
 import pandas as pd
 
 config = utils.load_config()
+
+# How many Members the comparison is for, set in the entry mask. It only ever
+# decides what the counts open at; the pipeline never sees it.
+members = config["members"]
 
 st.set_page_config(page_title="Cost of Living Analysis", layout="wide")
 st.title("Cost of Living Analysis")
@@ -47,21 +52,59 @@ with st.sidebar as selection_sidebar:
 
     st.subheader("Define how many times these activities are done in a month:")
 
+    # A count belongs to the Household, not to one person: it opens at the seed
+    # count for one Member and at twice that for a Per-person Cost item with two.
+    # A count the user has changed is theirs and is never rewritten; one they have
+    # not touched follows the household the moment it changes, which is what keeps
+    # a total from ever sitting at one household size while its labels describe
+    # another. Telling those two apart needs the default each count was last
+    # derived at, not just the value in the box: a box holding 40 could be an edit
+    # or a household that moved.
+    if "count_defaults" not in st.session_state:
+        st.session_state["count_defaults"] = {}
+    derived_defaults = st.session_state["count_defaults"]
+
     selected_activities = []
     for category in activity_df["activity_category"].sort_values().unique():
         with st.expander(category) as exp:
             activity_dict = activity_df.query("activity_category == @category")[
-                ["activity_name", "activity_monthly_default_count"]
+                ["activity_name", "activity_monthly_default_count", "counted_for"]
             ].to_dict(orient="records")
 
             for activity in activity_dict:
-                activity["selected_count"] = st.number_input(
-                    label=activity["activity_name"],
-                    value=activity["activity_monthly_default_count"],
+                name = activity["activity_name"]
+                counted_for = activity["counted_for"]
+                default = household.default_count(
+                    activity["activity_monthly_default_count"], counted_for, members
+                )
+                widget_key = f"count__{name}"
+
+                previous = derived_defaults.get(name)
+                held = (
+                    st.session_state[widget_key]
+                    if widget_key in st.session_state
+                    else None
+                )
+                if held is None or (held == previous and held != default):
+                    # Nothing opened yet, or an untouched count the household has
+                    # moved under.
+                    st.session_state[widget_key] = default
+                derived_defaults[name] = default
+
+                # max_value is generous on purpose: a couple's water opens at 60,
+                # and the old ceiling of 50 would refuse its own default.
+                selected_count = st.number_input(
+                    label=name,
                     step=1,
                     min_value=0,
-                    max_value=50,
+                    max_value=400,
+                    key=widget_key,
                 )
+
+                st.caption(
+                    household.per_member_figure(selected_count, counted_for, members)
+                )
+                activity["selected_count"] = selected_count
                 selected_activities.append(activity)
     # st.json(activity_dict)
 

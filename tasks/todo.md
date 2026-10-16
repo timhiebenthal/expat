@@ -4,16 +4,23 @@ Plan: `tasks/plan.md` | Contract: `SPEC.md` | Modules: `transform` `app` `qualit
 
 ## Worktree prerequisites
 
-`baseline/` and `database/dwh.duckdb` are both gitignored, so a fresh worktree has neither and everything that needs a warehouse will skip or fail. Before Task 1:
+`baseline/` and `database/dwh.duckdb` are both gitignored, so a fresh worktree has neither.
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
-# Pipeline work reads frozen inputs from the main checkout's baseline copy. The
-# transforms replace its analytics.* tables; its raw_* stay frozen, which is the
-# point of it.
-export DUCKDB_LOCATION=/home/tim_ubuntu/git_repos/expat/baseline/dwh.duckdb
-# Page tests copy a warehouse. A symlink is test-only: the app itself runs from
-# the main checkout, and DuckDB allows a single writer.
+
+# Pipeline work reads frozen inputs, but the frozen numbeo Raw still has dlt's
+# parent/child shape: running the transform layer against baseline/dwh.duckdb
+# itself fails with 'Referenced column "category" not found in FROM clause'. Apply
+# the flatten script to a SCRATCH copy, as its own comment says.
+cp /home/tim_ubuntu/git_repos/expat/baseline/dwh.duckdb /tmp/opencode/parity.duckdb
+duckdb /tmp/opencode/parity.duckdb -c ".read scripts/flatten_frozen_numbeo.sql"
+export DUCKDB_LOCATION=/tmp/opencode/parity.duckdb
+bruin run pipeline --selector "tag:layer:transform" --workers 1
+
+# The page tests copy database/dwh.duckdb and transform that copy themselves, so
+# they only need the file reachable. Not committed: a symlink is test-only, and
+# the app itself runs from the main checkout.
 ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 ```
 
@@ -99,17 +106,17 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 **Description:** Read the Member count from the app-owned settings and derive each count input's opening value from it. With no settings row the page must be indistinguishable from today, which is what makes this task safe to land before the mask can write a count.
 
 **Acceptance criteria:**
-- [ ] `utils.load_config()` returns `members` alongside `cities` and `jobs`, read from `raw_config.settings` where `key = 'members'`, through a typed accessor that falls back to 1 when the table, the row or the value is missing or nonsense, clamped to 1 or 2
-- [ ] Each sidebar input's value is `household.default_count(...)` for the Member count, and `max_value` is raised so the largest default (water, 60) fits - today's ceiling of 50 would block it
-- [ ] Every count shows its per-Member figure from `household.per_member_figure(...)`, and for a single Member it reads the same as the count
-- [ ] Widgets are keyed (`count__<activity name>`), and a session-state record holds the counts the user has changed
-- [ ] On render, a count the user has not changed is re-derived; a count they have changed keeps its value and is never silently rewritten
-- [ ] With `raw_config.settings(members = 2)`, the page opens at doubled per-person defaults and unchanged shared ones; with no such table, at today's numbers
+- [x] `utils.load_config()` returns `members` alongside `cities` and `jobs`, read from `raw_config.settings` where `key = 'members'`, through a typed accessor that falls back to 1 when the table, the row or the value is missing or nonsense, clamped to 1 or 2
+- [x] Each sidebar input's value is `household.default_count(...)` for the Member count, and `max_value` is raised so the largest default (water, 60) fits - today's ceiling of 50 would block it
+- [x] Every count shows its per-Member figure from `household.per_member_figure(...)`, and for a single Member it reads the same as the count
+- [x] Widgets are keyed (`count__<activity name>`), and a session-state record holds the default each count was last derived at - the only way to tell an edit from a household that moved
+- [x] On render, a count the user has not changed is re-derived; a count they have changed keeps its value and is never silently rewritten
+- [x] With `raw_config.settings(members = 2)`, the page opens at doubled per-person defaults and unchanged shared ones; with no such table, at today's numbers
 
 **Verification:**
-- [ ] `make test` passes, including `tests/test_comparison_page.py` extended with a settings row written into the warehouse copy and an assertion on the rendered input values
-- [ ] An `AppTest` rerun that changes one count and re-renders shows the changed value kept and the untouched ones still derived
-- [ ] `uv run streamlit run streamlit/Home.py` by hand against a two-Member settings row: cappuccino reads 8 and its label reads "4 per Member" for a couple
+- [x] `make test` passes, including `tests/test_comparison_page.py` extended with a settings row written into the warehouse copy and an assertion on the rendered input values
+- [x] An `AppTest` rerun that changes one count and re-renders shows the changed value kept and the untouched ones still derived
+- [x] `uv run streamlit run streamlit/Home.py` by hand against a two-Member settings row: cappuccino reads 8 and its label reads "4 per Member" for a couple
 
 **Dependencies:** Task 1 (the column has to exist in the warehouse), Task 2
 

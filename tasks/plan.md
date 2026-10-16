@@ -57,7 +57,7 @@ Task 3 both reads Task 1's column and writes between Tasks 2 and 4; nothing else
 
 ### Phase 3: The analysis surface
 
-- [ ] Task 3 `[app]` Counts open at the household's size, labelled per Member
+- [x] Task 3 `[app]` Counts open at the household's size, labelled per Member
 - [ ] Task 4 `[app]` Honest totals and the configured pair
 
 ### Checkpoint C: Analysis

@@ -8,6 +8,8 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
+import household
+
 # Docker and Cloud Run inject DUCKDB_LOCATION as a real environment variable. On
 # the host there is no shell export, so read it from .env. load_dotenv leaves an
 # already-set variable alone, so the container's value always wins.
@@ -63,6 +65,23 @@ def create_altair_labelled_vertical_bar_chart(df, x_field, x_label, y_field, y_l
     )
 
 
+def _read_settings(dwh):
+    """The app-owned scalars the entry mask wrote.
+
+    raw_config.settings only exists once the mask has written one, so a warehouse
+    from before that - or one the app has never written to - is normal rather than
+    broken, and reads as no settings at all.
+    """
+    import duckdb
+
+    try:
+        rows = dwh.sql("select key, value from raw_config.settings").df()
+    except duckdb.CatalogException:
+        return {}
+
+    return dict(zip(rows["key"], rows["value"]))
+
+
 def load_config():
     """
     Loads configuration from DuckDB
@@ -79,12 +98,14 @@ def load_config():
     try:
         cities = dwh.table("raw_config.cities").df()["name"].tolist()
         jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+        settings = _read_settings(dwh)
     finally:
         dwh.close()
 
     return {
         "cities": cities,
         "jobs": jobs,
+        "members": household.members_from_settings(settings),
     }
 
 
