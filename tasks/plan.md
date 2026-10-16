@@ -58,14 +58,14 @@ Task 3 both reads Task 1's column and writes between Tasks 2 and 4; nothing else
 ### Phase 3: The analysis surface
 
 - [x] Task 3 `[app]` Counts open at the household's size, labelled per Member
-- [ ] Task 4 `[app]` Honest totals and the configured pair
+- [x] Task 4 `[app]` Honest totals and the configured pair
 
 ### Checkpoint C: Analysis
 
-- [ ] With a two-Member settings row, the page opens at doubled per-person defaults and unchanged shared ones
-- [ ] With no settings row, the page renders exactly as it does today
-- [ ] An edited count survives a rerun and is not overwritten by a household change
-- [ ] `make test` passes
+- [x] With a two-Member settings row, the page opens at doubled per-person defaults and unchanged shared ones
+- [x] With no settings row, the page renders exactly as it does today
+- [x] An edited count survives a rerun and is not overwritten by a household change
+- [x] `make test` passes
 
 ### Phase 4: The entry mask
 

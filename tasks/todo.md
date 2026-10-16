@@ -134,15 +134,16 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 **Description:** Make the totals say what they are, and open the job picker on the household that was configured rather than on whichever title sorts first.
 
 **Acceptance criteria:**
-- [ ] The page's local column `variable_living_cost_eur` becomes `other_monthly_cost_eur`, displayed as "Other monthly cost" instead of "Additional Cost of Living"
-- [ ] Rent, other and total appear as three separate lines with the sums they name, and the rent line names the selected location
-- [ ] The sidebar's job multiselect opens on the pair configured in `raw_config.jobs`, matched against the warehouse's `job_title_experience_short` values, falling back to the first available title when a configured one is absent
-- [ ] Changing the job selection moves income, total, the ratios and savings only: the rent and other cost columns are identical for the same cities
-- [ ] No column is renamed in the pipeline; this is a page-local rename
+- [x] The page's local column `variable_living_cost_eur` becomes `other_monthly_cost_eur`, displayed as "Other monthly cost" instead of "Additional Cost of Living"
+- [x] Rent, other and total appear as three separate lines with the sums they name, and the rent line names the selected location
+- [x] The sidebar's job multiselect opens on the pair configured in `raw_config.jobs`, matched against the warehouse's `job_title_experience_short` values, falling back to the first available title when a configured one is absent
+- [x] Changing the job selection moves income, total, the ratios and savings only: the rent and other cost columns are identical for the same cities
+- [x] No column is renamed in the pipeline; this is a page-local rename
+- [x] A warehouse without `counted_for` says to run the pipeline rather than dying inside pandas (folded in here on the user's say-so)
 
 **Verification:**
-- [ ] `make test` passes, including a `tests/test_comparison_page.py` assertion that the picker's default is the configured pair and that the cost columns do not move when the selection changes
-- [ ] `uv run streamlit run streamlit/Home.py` by hand: the three lines appear and add up
+- [x] `make test` passes, including a `tests/test_comparison_page.py` assertion that the picker's default is the configured pair and that the cost columns do not move when the selection changes
+- [x] `uv run streamlit run streamlit/Home.py` by hand: the three lines appear and add up per city - asserted on the rendered table; the header *text* is canvas-rendered and not machine-checkable here, so it is code-level only
 
 **Dependencies:** Task 3
 

@@ -130,6 +130,89 @@ def counts(page):
     return {element.label: element.value for element in page.number_input}
 
 
+def picker(page, label):
+    return next(element for element in page.multiselect if element.label == label)
+
+
+def drop_basis_column(warehouse):
+    """A warehouse from before the household counts existed."""
+    import duckdb
+
+    dwh = duckdb.connect(str(warehouse))
+    try:
+        dwh.sql("alter table analytics.core__activity drop column counted_for")
+    finally:
+        dwh.close()
+
+
+def existing_jobs(warehouse):
+    """The distinct jobs the warehouse already holds, as (title, years)."""
+    import duckdb
+
+    dwh = duckdb.connect(str(warehouse))
+    try:
+        return [
+            tuple(row)
+            for row in dwh.sql(
+                "select distinct job_title, job_experience "
+                "from analytics.core__job_earnings"
+            ).fetchall()
+        ]
+    finally:
+        dwh.close()
+
+
+def configure_jobs(warehouse, rows):
+    """Point the app's config at chosen jobs, in the order given."""
+    import duckdb
+    import pandas as pd
+
+    dwh = duckdb.connect(str(warehouse))
+    try:
+        jobs_df = pd.DataFrame(rows, columns=["job_title", "years_experience"])
+        dwh.sql("create or replace table raw_config.jobs as select * from jobs_df")
+    finally:
+        dwh.close()
+
+
+def add_earner(warehouse, title, years=3, net_salary_eur=4200):
+    """Give the household a second job, in the config and in the earnings.
+
+    The warehouse this fixture copies is only as wide as the config of the last
+    pipeline run - one job, at the time of writing - while a couple of earners is
+    the point of the feature. So the second one is built here, rather than assumed
+    to be in the frozen data.
+    """
+    import duckdb
+
+    dwh = duckdb.connect(str(warehouse))
+    try:
+        dwh.sql(
+            f"""
+            insert into analytics.core__job_earnings by name
+            select
+                md5(city_name || '{title}') as entity_id,
+                city_name,
+                country_name,
+                '{title}' as job_title,
+                {years} as job_experience,
+                local_currency,
+                '{title} ({years} years)' as job_title_experience_short,
+                {net_salary_eur} as avg_monthly_net_salary_eur
+            from (
+                select distinct city_name, country_name, local_currency
+                from analytics.core__job_earnings
+            )
+            """
+        )
+        dwh.sql(
+            "insert into raw_config.jobs by name "
+            f"select '{title}' as job_title, {years} as years_experience"
+        )
+    finally:
+        dwh.close()
+
+
 def test_page_renders_without_exception(comparison_page):
     assert not comparison_page.exception, "\n".join(
         str(e.value) for e in comparison_page.exception
@@ -228,3 +311,84 @@ def test_an_edited_count_survives_a_household_change(warehouse_copy, render_page
     values = counts(page)
     assert values["Restaurant - Cappuccino"] == 40, "an edit was overwritten"
     assert values["Groceries - 1.5l Water"] == 30, "an untouched count did not follow"
+
+
+def test_the_other_monthly_cost_column_replaces_the_additional_one(
+    warehouse_copy, render_page
+):
+    """That column is everything except rent, and broadband is in it."""
+    table = render_page(warehouse_copy, members=2).dataframe[0].value
+
+    assert "other_monthly_cost_eur" in table.columns
+    assert "variable_living_cost_eur" not in table.columns
+
+
+def test_the_cost_lines_add_up(warehouse_copy, render_page):
+    table = render_page(warehouse_copy, members=2).dataframe[0].value
+
+    assert (table["monthly_rent_eur"] > 0).all()
+    assert (table["other_monthly_cost_eur"] > 0).all()
+
+    remainder = (
+        table["monthly_rent_eur"]
+        + table["other_monthly_cost_eur"]
+        - table["total_monthly_cost"]
+    )
+    assert remainder.abs().max() < 0.01, f"rent + other != total: {remainder.tolist()}"
+
+
+def test_the_job_picker_opens_on_the_configured_pair(warehouse_copy, render_page):
+    """Configured, not sorted: the pair is taken from the app's config, in order."""
+    original = existing_jobs(warehouse_copy)[0]
+    add_earner(warehouse_copy, title="Zeta Partner Engineer", years=3)
+    configure_jobs(
+        warehouse_copy, [("Zeta Partner Engineer", 3), original]
+    )
+    page = render_page(warehouse_copy, members=2)
+
+    assert picker(page, "Enter job title:").value == [
+        "Zeta Partner Engineer (3 years)",
+        f"{original[0]} ({int(original[1])} years)",
+    ]
+
+
+def test_the_picker_opens_on_at_most_two_jobs(warehouse_copy, render_page):
+    """A configuration with more jobs than a household has earners."""
+    original = existing_jobs(warehouse_copy)[0]
+    add_earner(warehouse_copy, title="Zeta Partner Engineer", years=3)
+    add_earner(warehouse_copy, title="Beta Partner Engineer", years=9)
+    configure_jobs(
+        warehouse_copy,
+        [original, ("Zeta Partner Engineer", 3), ("Beta Partner Engineer", 9)],
+    )
+    page = render_page(warehouse_copy, members=2)
+
+    assert not page.exception
+    assert len(picker(page, "Enter job title:").value) == 2
+
+
+def test_the_job_selection_moves_income_only(warehouse_copy, render_page):
+    add_earner(warehouse_copy, title="Zeta Partner Engineer", years=3)
+    page = render_page(warehouse_copy, members=2)
+    selection = picker(page, "Enter job title:")
+    assert len(selection.value) == 2, "the fixture needs a pair to narrow from"
+
+    before = page.dataframe[0].value.set_index("city_name")
+    selection.set_value([selection.value[0]]).run()
+    after = page.dataframe[0].value.set_index("city_name")
+
+    assert (after["other_monthly_cost_eur"] == before["other_monthly_cost_eur"]).all()
+    assert (after["monthly_rent_eur"] == before["monthly_rent_eur"]).all()
+    assert (
+        after["total_monthly_net_salary_eur"] < before["total_monthly_net_salary_eur"]
+    ).all()
+
+
+def test_a_warehouse_without_the_basis_column_says_so(warehouse_copy, render_page):
+    """Failing loudly is right; failing with a pandas KeyError is not."""
+    drop_basis_column(warehouse_copy)
+    page = render_page(warehouse_copy)
+
+    assert not page.exception, "\n".join(str(e.value) for e in page.exception)
+    messages = " ".join(element.value for element in page.error).lower()
+    assert "pipeline" in messages, messages
