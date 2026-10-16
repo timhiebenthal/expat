@@ -13,6 +13,22 @@ depends:
 tags:
   - layer:transform
   - layer:core
+
+custom_checks:
+  # The Cost group rule in prep decides whether a Cost item's count is per Member
+  # or once for the household, and it falls back to household for a group it does
+  # not recognise. A Cost group numbeo adds would then be treated as shared without
+  # anyone deciding it - in every city the same way, so the ranking would look
+  # right while every total was understated. This refuses to let that pass.
+  - name: every Cost item belongs to a known Cost group
+    query: |
+      select count(*)
+      from analytics.seed_activity_mapping
+      where activity_type not in (
+        'Groceries', 'Restaurant', 'Mobility', 'Leisure', 'Clothing',
+        'Utilities', 'Housing', 'Buy Housing', 'Childcare', 'Education'
+      )
+    value: 0
 @bruin */
 -- Port of the dbt model. The two CASE arms that both yield true are kept as they
 -- are: collapsing them would be a cleanup, not a port.

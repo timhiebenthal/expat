@@ -79,7 +79,7 @@ Task 3 both reads Task 1's column and writes between Tasks 2 and 4; nothing else
 
 ### Phase 5: Guards and capture
 
-- [ ] Task 6 `[quality]` The unknown Cost group check, seen failing
+- [x] Task 6 `[quality]` The unknown Cost group check, seen failing
 - [ ] Task 7 `[docs]` Capture the prototype, retire the README line
 
 ### Checkpoint E: Complete

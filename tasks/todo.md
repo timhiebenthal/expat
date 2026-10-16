@@ -210,14 +210,16 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 **Description:** Guard the one silent failure this design allows: a Numbeo Cost group arriving with no decision made about whether it is per-person, which the prep default would quietly treat as Shared. The check asserts every `activity_type` in the seed is one the Cost group rule knows.
 
 **Acceptance criteria:**
-- [ ] `core__activity` carries a `custom_check` in the port's shape whose query counts seed rows whose `activity_type` is outside the known groups (Groceries, Restaurant, Mobility, Leisure, Clothing, Utilities, Housing, Buy Housing, Childcare, Education) and whose `value` is 0
-- [ ] The check has been observed failing on a deliberately unknown group, with the failure recorded in the commit message, then restored to passing
-- [ ] The check attaches to `core__activity`, the asset that would be wrong, not to a central place
+- [x] `core__activity` carries a `custom_check` in the port's shape whose query counts seed rows whose `activity_type` is outside the known groups (Groceries, Restaurant, Mobility, Leisure, Clothing, Utilities, Housing, Buy Housing, Childcare, Education) and whose `value` is 0
+- [x] The check has been observed failing on a deliberately unknown group, with the failure recorded in the commit message, then restored to passing
+- [x] The check attaches to `core__activity`, the asset that would be wrong, not to a central place
 
 **Verification:**
-- [ ] Break it: add a seed row with an unknown group, `bruin run pipeline --selector "tag:layer:transform" --workers 1`, observe the check fail and the count exceed 0
-- [ ] Restore it: the same command passes with a count of 0
-- [ ] `uv run pytest tests/test_pipeline_validates.py -v` and `make test` pass
+- [x] Break it: add a seed row with an unknown group, `bruin run pipeline --selector "tag:layer:transform" --workers 1`, observe the check fail and the count exceed 0
+- [x] Restore it: the same command passes with a count of 0
+- [x] `uv run pytest tests/test_pipeline_validates.py -v` and `make test` pass
+
+**Note on the drift test added here:** the guard's list is every group anyone has decided about, while the rule's list is only the per-person ones, so the invariant is `rule <= guard`, not equality. The first version of the test asserted equality and failed on the real files for that reason.
 
 **Dependencies:** Task 1
 
