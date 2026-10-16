@@ -637,3 +637,38 @@ def test_materialize_propagates_a_throttled_refresh(tmp_path, monkeypatch, inges
 
     with pytest.raises(numbeo.NumbeoThrottled):
         ingest.materialize()
+
+
+def _persist(db, rows):
+    """What Bruin's create+replace would write, so the next run can read it."""
+    import duckdb
+
+    con = duckdb.connect(db)
+    con.execute("delete from raw_numbeo.cost_of_living")
+    for row in rows:
+        con.execute(
+            "insert into raw_numbeo.cost_of_living values (?, ?, ?, ?)",
+            [row["city"], row["category"], row["cost"], row["scraped_at"]],
+        )
+    con.close()
+
+
+def test_a_second_run_makes_no_fetch(tmp_path, monkeypatch, ingest):
+    """The point of the cache: the same cities twice cost one scrape, not two."""
+    db = _scratch_scrape_db(tmp_path, cities=[("Berlin", "Berlin")], stored=[])
+    monkeypatch.setenv("DUCKDB_LOCATION", db)
+
+    fetched = []
+
+    def fake(city, slug=None, fetch=None):
+        fetched.append(city)
+        return [{"city": city, "data": [{"category": "Meal", "cost": "15 €"}]}]
+
+    monkeypatch.setattr(ingest, "get_city_data", fake)
+
+    first = ingest.materialize()
+    _persist(db, first)
+    second = ingest.materialize()
+
+    assert fetched == ["Berlin"], "only the first run may fetch"
+    assert second == first

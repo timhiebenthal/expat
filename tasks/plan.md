@@ -30,10 +30,10 @@ Make `raw_numbeo.cost_of_living` remember what it already scraped, so a run only
 - [x] A fresh city is not fetched; a stale or new one is, and is stamped
 
 ### Phase 3: Proof
-- [ ] Task 3: two runs, the second makes zero requests
+- [x] Task 3: two runs, the second makes zero requests
 
 ### Checkpoint: Complete
-- [ ] Every acceptance criterion met; `make test` green; `bruin validate pipeline` clean
+- [x] Every acceptance criterion met; `make test` green; `bruin validate pipeline` clean
 
 ## Risks and Mitigations
 

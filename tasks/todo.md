@@ -65,11 +65,11 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** A test that calls `materialize()` twice against one scratch warehouse: the first fetch returns data for every city, the second fetch must not be called at all.
 
 **Acceptance criteria:**
-- [ ] The second run makes zero fetches.
-- [ ] The table written by the second run is identical to the first (same rows, same `scraped_at`).
+- [x] The second run makes zero fetches.
+- [x] The table written by the second run is identical to the first (same rows, same `scraped_at`).
 
 **Verification:**
-- [ ] `make test` passes.
+- [x] `make test` passes.
 
 **Dependencies:** Task 2.
 **Files:** `tests/test_costofliving.py`.
