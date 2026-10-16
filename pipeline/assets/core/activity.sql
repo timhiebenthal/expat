@@ -22,6 +22,7 @@ with
             activity_name,
             activity_type,
             activity_category,
+            counted_for,
             monthly_activity_count as activity_monthly_default_count,
             regexp_replace(
                 regexp_replace(

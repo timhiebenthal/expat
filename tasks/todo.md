@@ -26,17 +26,17 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 **Description:** Add one data column that says whether a Cost item's count is stated per Member or for the Household, default it from the Cost group in prep, and carry it through to `core__activity`. No value changes for a one-Member household: `activity_monthly_default_count` is untouched and this task changes no arithmetic anywhere.
 
 **Acceptance criteria:**
-- [ ] `seed_activity_mapping.csv` gains a fully quoted `counted_for` column: empty on every row except `Restaurant - Mid-range Meal for 2` (`household`) and `Utilities - Mobile Phone Plan` (`person`)
-- [ ] `seed_activity_mapping.asset.yml` declares `counted_for` as `varchar`, next to the existing column declarations
-- [ ] `prep__numbeo_cost_of_living` resolves an empty value with `coalesce(nullif(mapping.counted_for, ''), case when mapping.activity_type in ('Groceries', 'Restaurant', 'Mobility', 'Leisure', 'Clothing') then 'person' else 'household' end)` and names the result `counted_for`
-- [ ] `core__activity`'s `distinct` select includes `counted_for`, so dashboard rows carry it
-- [ ] No other column and no value in `prep__numbeo_cost_of_living` changes
+- [x] `seed_activity_mapping.csv` gains a fully quoted `counted_for` column: empty on every row except `Restaurant - Mid-range Meal for 2` (`household`) and `Utilities - Mobile Phone Plan` (`person`)
+- [x] `seed_activity_mapping.asset.yml` declares `counted_for` as `varchar`, next to the existing column declarations
+- [x] `prep__numbeo_cost_of_living` resolves an empty value with `coalesce(nullif(mapping.counted_for, ''), case when mapping.activity_type in ('Groceries', 'Restaurant', 'Mobility', 'Leisure', 'Clothing') then 'person' else 'household' end)` and names the result `counted_for`
+- [x] `core__activity`'s `distinct` select includes `counted_for`, so dashboard rows carry it
+- [x] No other column and no value in `prep__numbeo_cost_of_living` changes
 
 **Verification:**
-- [ ] `bruin run pipeline --selector "tag:layer:transform" --workers 1` succeeds against `baseline/dwh.duckdb` (the seed is tagged `layer:transform` on purpose, so the selector picks up the new column)
-- [ ] `duckdb "$DUCKDB_LOCATION" -c "select counted_for, count(*) from analytics.core__activity group by 1 order by 1"` shows both values, and the two exception items resolve to their stated basis
-- [ ] `duckdb "$DUCKDB_LOCATION" -c "select count(*) from analytics.prep__numbeo_cost_of_living where counted_for is null or counted_for = ''"` returns 0
-- [ ] `make test` passes, including `tests/test_numbeo_activity_mapping.py`, which reads the seed by column name
+- [x] `bruin run pipeline --selector "tag:layer:transform" --workers 1` succeeds against `baseline/dwh.duckdb` (the seed is tagged `layer:transform` on purpose, so the selector picks up the new column)
+- [x] `duckdb "$DUCKDB_LOCATION" -c "select counted_for, count(*) from analytics.core__activity group by 1 order by 1"` shows both values, and the two exception items resolve to their stated basis
+- [x] `duckdb "$DUCKDB_LOCATION" -c "select count(*) from analytics.prep__numbeo_cost_of_living where counted_for is null or counted_for = ''"` returns 0
+- [x] `make test` passes, including `tests/test_numbeo_activity_mapping.py`, which reads the seed by column name
 
 **Dependencies:** None
 
@@ -52,9 +52,9 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 
 ## Checkpoint A: Basis
 
-- [ ] The transform layer runs against the baseline copy and every row of `core__activity` resolves a basis
-- [ ] The two exceptions resolve as specified; every other row follows its Cost group
-- [ ] `make test` passes
+- [x] The transform layer runs against the baseline copy and every row of `core__activity` resolves a basis
+- [x] The two exceptions resolve as specified; every other row follows its Cost group
+- [x] `make test` passes
 
 ---
 

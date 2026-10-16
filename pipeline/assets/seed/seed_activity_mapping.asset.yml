@@ -23,3 +23,6 @@ columns:
     type: varchar
   - name: activity_count
     type: integer
+  # Empty means "take the Cost group's default"; only the exceptions state one.
+  - name: counted_for
+    type: varchar

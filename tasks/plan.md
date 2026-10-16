@@ -38,13 +38,13 @@ Task 3 both reads Task 1's column and writes between Tasks 2 and 4; nothing else
 
 ### Phase 1: The Cost item basis
 
-- [ ] Task 1 `[transform]` Seed, prep and core carry `counted_for`
+- [x] Task 1 `[transform]` Seed, prep and core carry `counted_for`
 
 ### Checkpoint A: Basis
 
-- [ ] The transform layer runs against the frozen baseline copy and `core__activity` resolves a basis for every row
-- [ ] The two exception items resolve as specified and every other row follows its Cost group
-- [ ] `make test` passes
+- [x] The transform layer runs against the frozen baseline copy and `core__activity` resolves a basis for every row
+- [x] The two exception items resolve as specified and every other row follows its Cost group
+- [x] `make test` passes
 
 ### Phase 2: The counting model
 
