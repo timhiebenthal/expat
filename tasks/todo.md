@@ -65,15 +65,15 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 **Description:** Write the failing tests first, then the module. Three pure functions, ported from the prototype's module, with no Streamlit import: the opening count for a Cost item, the per-Member figure for its label, and the Member count read from a settings mapping. One Member must reproduce today's numbers exactly, which is what makes the module's tests the regression test for the whole feature.
 
 **Acceptance criteria:**
-- [ ] `tests/test_household.py` exists and fails before the module does
-- [ ] `default_count(seed_count, counted_for, members)`: couple - cappuccino 8, water 60, mobile phone 2, broadband 1, utilities 1, meal for two 4; single - 4, 30, 1, 1, 1, 4
-- [ ] `per_member_figure(count, counted_for, members)`: `"20 per Member"` for 40 with two Members and for 40 with one, `"shared - paid once for the household"` for a shared Cost item
-- [ ] `members_from_settings(settings)`: `"2"` -> 2, missing key -> 1, `None` -> 1, `"3"` -> 2, `"0"` -> 1, `"two"` -> 1
-- [ ] The module imports nothing from Streamlit or DuckDB
+- [x] `tests/test_household.py` exists and fails before the module does
+- [x] `default_count(seed_count, counted_for, members)`: couple - cappuccino 8, water 60, mobile phone 2, broadband 1, utilities 1, meal for two 4; single - 4, 30, 1, 1, 1, 4
+- [x] `per_member_figure(count, counted_for, members)`: `"20 per Member"` for 40 with two Members, `"40 per Member"` for 40 with one, `"shared - paid once for the household"` for a shared Cost item
+- [x] `members_from_settings(settings)`: `"2"` -> 2, missing key -> 1, `None` -> 1, `"3"` -> 2, `"0"` -> 1, `"two"` -> 1
+- [x] The module imports nothing from Streamlit or DuckDB
 
 **Verification:**
-- [ ] `uv run pytest tests/test_household.py -v` fails first for the right reason, then passes
-- [ ] `make test` passes
+- [x] `uv run pytest tests/test_household.py -v` fails first for the right reason, then passes
+- [x] `make test` passes
 
 **Dependencies:** None (Task 1 is not needed to write or test pure functions)
 
@@ -87,8 +87,8 @@ ln -s /home/tim_ubuntu/git_repos/expat/database/dwh.duckdb database/dwh.duckdb
 
 ## Checkpoint B: Counting
 
-- [ ] The couple and single-person numbers match the prototype's verified values
-- [ ] `make test` passes
+- [x] The couple and single-person numbers match the prototype's verified values
+- [x] `make test` passes
 
 ---
 

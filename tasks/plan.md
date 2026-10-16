@@ -48,12 +48,12 @@ Task 3 both reads Task 1's column and writes between Tasks 2 and 4; nothing else
 
 ### Phase 2: The counting model
 
-- [ ] Task 2 `[app]` `streamlit/household.py`, tests first
+- [x] Task 2 `[app]` `streamlit/household.py`, tests first
 
 ### Checkpoint B: Counting
 
-- [ ] The couple and single-person numbers match the prototype exactly
-- [ ] `make test` passes
+- [x] The couple and single-person numbers match the prototype exactly
+- [x] `make test` passes
 
 ### Phase 3: The analysis surface
 
