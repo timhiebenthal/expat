@@ -12,15 +12,15 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** Add `SCRAPE_TTL_DAYS = 180` and `plan_scrapes(configured, stored, now, ttl_days=SCRAPE_TTL_DAYS)` to `pipeline/lib/numbeo.py`. `configured` is a list of `(name, slug)` pairs; `stored` is the existing `raw_numbeo.cost_of_living` rows (dicts with `city` and `scraped_at`). Return the `(name, slug)` pairs that need a fetch: a city with no stored rows, or whose newest `scraped_at` is older than `now - ttl_days`.
 
 **Acceptance criteria:**
-- [ ] A city with a `scraped_at` inside the TTL is excluded.
-- [ ] A city with a `scraped_at` older than the TTL is included.
-- [ ] A city with no stored rows is included.
-- [ ] A stored set with no `scraped_at` (the old shape) includes everything.
-- [ ] Returns `(name, slug)` pairs, in `configured` order.
+- [x] A city with a `scraped_at` inside the TTL is excluded.
+- [x] A city with a `scraped_at` older than the TTL is included.
+- [x] A city with no stored rows is included.
+- [x] A stored set with no `scraped_at` (the old shape) includes everything.
+- [x] Returns `(name, slug)` pairs, in `configured` order.
 
 **Verification:**
-- [ ] `make test` passes.
-- [ ] `tests/test_costofliving.py` covers fresh, stale, missing, and old-shape.
+- [x] `make test` passes.
+- [x] `tests/test_costofliving.py` covers fresh, stale, missing, and old-shape.
 
 **Dependencies:** None.
 **Files:** `pipeline/lib/numbeo.py`, `tests/test_costofliving.py`.

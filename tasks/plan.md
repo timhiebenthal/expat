@@ -18,10 +18,10 @@ Make `raw_numbeo.cost_of_living` remember what it already scraped, so a run only
 ## Task List
 
 ### Phase 1: The decision
-- [ ] Task 1: `SCRAPE_TTL_DAYS` + `plan_scrapes` (pure)
+- [x] Task 1: `SCRAPE_TTL_DAYS` + `plan_scrapes` (pure)
 
 ### Checkpoint: Decision
-- [ ] `make test` passes; fresh / stale / missing / old-shape cases covered
+- [x] `make test` passes; fresh / stale / missing / old-shape cases covered
 
 ### Phase 2: The ingest
 - [ ] Task 2: read stored rows, fetch only the planned set, stamp `scraped_at`

@@ -9,6 +9,8 @@ asset calls.
 
 import pytest
 
+from datetime import datetime, timedelta
+
 NUMBEO_TABLE = """
 <table class="data_wide_table new_bar_table">
   <tr><td></td></tr>
@@ -400,3 +402,55 @@ def test_get_city_data_raises_on_429(numbeo):
     """This is the one that took the whole ingest down: raise_for_status first."""
     with pytest.raises(numbeo.NumbeoThrottled):
         numbeo.get_city_data("Berlin", fetch=lambda *a, **k: _TooManyRequests())
+
+
+def test_plan_scrapes_skips_a_fresh_city(numbeo):
+    now = datetime(2026, 10, 16)
+    stored = [{"city": "Munich", "scraped_at": datetime(2026, 10, 1)}]
+
+    assert numbeo.plan_scrapes([("Munich", "Munich")], stored, now) == []
+
+
+def test_plan_scrapes_includes_a_city_older_than_the_ttl(numbeo):
+    now = datetime(2026, 10, 16)
+    stored = [{"city": "Munich", "scraped_at": now - timedelta(days=181)}]
+
+    assert numbeo.plan_scrapes([("Munich", "Munich")], stored, now) == [
+        ("Munich", "Munich")
+    ]
+
+
+def test_plan_scrapes_includes_a_city_with_no_rows(numbeo):
+    now = datetime(2026, 10, 16)
+
+    assert numbeo.plan_scrapes([("Tel Aviv", "Tel-Aviv-Yafo")], [], now) == [
+        ("Tel Aviv", "Tel-Aviv-Yafo")
+    ]
+
+
+def test_plan_scrapes_includes_everything_when_the_timestamp_is_missing(numbeo):
+    """An old-shape table has no scraped_at, so nothing can be reused."""
+    now = datetime(2026, 10, 16)
+    stored = [{"city": "Munich", "category": "Meal", "cost": "10"}]
+
+    assert numbeo.plan_scrapes([("Munich", "Munich")], stored, now) == [
+        ("Munich", "Munich")
+    ]
+
+
+def test_plan_scrapes_judges_a_city_by_its_newest_row(numbeo):
+    now = datetime(2026, 10, 16)
+    stored = [
+        {"city": "Munich", "scraped_at": now - timedelta(days=400)},
+        {"city": "Munich", "scraped_at": now - timedelta(days=10)},
+    ]
+
+    assert numbeo.plan_scrapes([("Munich", "Munich")], stored, now) == []
+
+
+def test_plan_scrapes_keeps_the_configured_order(numbeo):
+    now = datetime(2026, 10, 16)
+
+    assert numbeo.plan_scrapes(
+        [("Tel Aviv", "Tel-Aviv-Yafo"), ("Munich", "Munich")], [], now
+    ) == [("Tel Aviv", "Tel-Aviv-Yafo"), ("Munich", "Munich")]
