@@ -23,6 +23,22 @@ NUMBEO_HOST = "https://www.numbeo.com"
 CITY_URL_BASE = "https://www.numbeo.com/cost-of-living/in"
 
 
+class NumbeoThrottled(RuntimeError):
+    """numbeo served its 'Access Restricted' page instead of the endpoint."""
+
+
+def _is_throttled(response):
+    """True when numbeo answered with its rate-limit page.
+
+    numbeo returns a 200 HTML page for throttling, so the status code says
+    nothing and the body is the only signal.
+    """
+    content = getattr(response, "content", b"") or b""
+    if isinstance(content, str):
+        content = content.encode()
+    return b"access restricted" in content.lower()
+
+
 def parse_table_rows(table):
     """Extract category/cost pairs from a numbeo cost-of-living table.
 
@@ -66,6 +82,8 @@ def search_cities(term, fetch=None):
     url = f"{CITY_SEARCH_URL}?term={quote_plus(term)}"
     response = fetch(url, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
+    if _is_throttled(response):
+        raise NumbeoThrottled(f"numbeo is rate-limiting us at '{url}'")
     return response.json()
 
 
@@ -84,6 +102,8 @@ def canonical_slug(city_id, fetch=None):
 
     location = response.headers.get("Location", "")
     if not location.startswith(NUMBEO_HOST):
+        if _is_throttled(response):
+            raise NumbeoThrottled(f"numbeo is rate-limiting us at '{url}'")
         return None
     slug = location[len(NUMBEO_HOST):].strip("/").split("/")[-1]
     return slug or None

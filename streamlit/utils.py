@@ -128,6 +128,28 @@ def save_config_to_duckdb(city_df, jobs_df):
         dwh.close()
 
 
+class ResolutionThrottled(RuntimeError):
+    """numbeo is rate-limiting; the app reports it instead of a stack trace."""
+
+
+def _resolve(name, country, fetch):
+    from pipeline.lib.numbeo import NumbeoThrottled, resolve_city
+
+    try:
+        return resolve_city(name, country=country, fetch=fetch)
+    except NumbeoThrottled as exc:
+        raise ResolutionThrottled(str(exc)) from exc
+
+
+def _slug_for(city_id, fetch):
+    from pipeline.lib.numbeo import NumbeoThrottled, canonical_slug
+
+    try:
+        return canonical_slug(city_id, fetch=fetch)
+    except NumbeoThrottled as exc:
+        raise ResolutionThrottled(str(exc)) from exc
+
+
 def load_city_slugs(database_location=None):
     """name -> ``{"slug", "city_id"}`` for every resolved city in raw_config.
 
@@ -176,7 +198,7 @@ def resolve_city_rows(cities, fetch=None):
         if not name:
             continue
         country = (city.get("country") or "").strip()
-        outcome = resolve_city(name, country=country or None, fetch=fetch)
+        outcome = _resolve(name, country or None, fetch)
         annotated.append({**city, "state": outcome.state, "matches": outcome.matches})
     return annotated
 
@@ -213,8 +235,6 @@ def picks_from(annotated, choices=None, fetch=None):
     row uses ``choices[name]["manual"]`` as a slug, or is dropped. The slug is
     read from numbeo only for a chosen id, never for the whole candidate list.
     """
-    from pipeline.lib.numbeo import canonical_slug
-
     choices = choices or {}
     picks = {}
     for city in annotated:
@@ -225,13 +245,13 @@ def picks_from(annotated, choices=None, fetch=None):
         elif city["state"] == "resolved":
             city_id = city["matches"][0]["value"]
             picks[name] = {
-                "slug": canonical_slug(city_id, fetch=fetch),
+                "slug": _slug_for(city_id, fetch),
                 "city_id": city_id,
             }
         elif city["state"] == "ambiguous" and choice.get("city_id"):
             city_id = choice["city_id"]
             picks[name] = {
-                "slug": canonical_slug(city_id, fetch=fetch),
+                "slug": _slug_for(city_id, fetch),
                 "city_id": city_id,
             }
         elif city["state"] == "unresolved":
@@ -248,17 +268,13 @@ def rename_rows(annotated, renames, fetch=None):
     A rename is a new name to match, not a label change: the row is resolved
     again so the panel can tell whether it is still blocked.
     """
-    from pipeline.lib.numbeo import resolve_city
-
     updated = []
     for city in annotated:
         new_name = renames.get(city["name"])
         if not new_name:
             updated.append(city)
             continue
-        outcome = resolve_city(
-            new_name, country=city.get("country") or None, fetch=fetch
-        )
+        outcome = _resolve(new_name, city.get("country") or None, fetch)
         updated.append(
             {
                 **city,

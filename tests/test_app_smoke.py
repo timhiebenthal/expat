@@ -44,10 +44,10 @@ def gate(monkeypatch):
     import utils
 
     calls = {}
-    state = {}
+    state = {"utils": utils}
 
     monkeypatch.setattr(
-        utils, "resolve_city_rows", lambda cities, fetch=None: state["annotated"]
+        utils, "resolve_city_rows", lambda cities, fetch=None: _resolve(state)
     )
     monkeypatch.setattr(
         utils,
@@ -72,8 +72,9 @@ def gate(monkeypatch):
     monkeypatch.setattr(utils, "run_pipeline", lambda: calls.update(ran=True) or True)
     monkeypatch.setattr(st, "switch_page", lambda *a, **k: None)
 
-    def build(annotated):
+    def build(annotated, throttle=False):
         state["annotated"] = annotated
+        state["throttle"] = throttle
         at = AppTest.from_file(APP_PATH, default_timeout=30)
         at.session_state["city_suggestions"] = [
             {"name": "Munich", "country": "Germany", "description": "home"}
@@ -85,6 +86,12 @@ def gate(monkeypatch):
         yield build, calls
     finally:
         sys.path.remove(os.path.dirname(APP_PATH))
+
+
+def _resolve(state):
+    if state.get("throttle"):
+        raise state["utils"].ResolutionThrottled("numbeo is rate-limiting us")
+    return state["annotated"]
 
 
 def _submit(at):
@@ -138,3 +145,13 @@ def test_gate_blocks_the_write_and_shows_the_panel(gate):
     confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
     assert confirm.disabled is True
     assert any("no match" in w.value for w in at.warning)
+
+
+def test_gate_reports_a_throttle_and_writes_nothing(gate):
+    build, calls = gate
+    at = build([], throttle=True)
+
+    _submit(at)
+
+    assert "saved" not in calls
+    assert any("rate-limiting" in e.value for e in at.error)

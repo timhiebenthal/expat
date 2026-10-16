@@ -342,3 +342,31 @@ def test_materialize_passes_the_slug_through(tmp_path, monkeypatch, ingest):
     ingest.materialize()
 
     assert seen == {"Tel Aviv": "Tel-Aviv-Yafo"}
+
+
+def test_search_cities_raises_when_numbeo_throttles(numbeo):
+    """numbeo answers a throttle with a 200 HTML page, not JSON."""
+
+    class Response:
+        content = b"<html><head><title>Access Restricted</title></head></html>"
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            raise ValueError("not json")
+
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.search_cities("Munich", fetch=lambda *a, **k: Response())
+
+
+def test_canonical_slug_raises_when_numbeo_throttles(numbeo):
+    class Response:
+        content = b"<html><head><title>Access Restricted</title></head></html>"
+        headers = {}
+
+        def raise_for_status(self):
+            pass
+
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.canonical_slug("1111", fetch=lambda *a, **k: Response())

@@ -37,10 +37,10 @@ Resolve each submitted city to the slug Numbeo keys it under, in the Streamlit a
 
 ### Phase 4: App gate
 - [x] Task 6: `Home.py` Submit gate + resolution panel
-- [ ] Task 7: throttle feedback + distinct "Access Restricted" logging
+- [x] Task 7: throttle feedback + distinct "Access Restricted" logging
 
 ### Checkpoint: App
-- [ ] `AppTest`: happy path unchanged; ambiguous and unresolved render; Confirm disabled while blocked
+- [x] `AppTest`: happy path unchanged; ambiguous and unresolved render; Confirm disabled while blocked
 
 ### Phase 5: End to end
 - [ ] Task 8: resolution -> write -> ingest read, on a scratch warehouse

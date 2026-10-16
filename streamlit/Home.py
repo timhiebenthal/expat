@@ -165,12 +165,27 @@ def _render_resolution_panel(annotated):
         if choice.get("rename") and choice["rename"].strip() != name
     }
     if renames:
-        st.session_state.resolution = utils.rename_rows(annotated, renames)
-        st.rerun()
+        try:
+            st.session_state.resolution = utils.rename_rows(annotated, renames)
+        except utils.ResolutionThrottled:
+            st.error(
+                "Numbeo is rate-limiting us right now (Access Restricted). Retry in "
+                "a few minutes."
+            )
+        else:
+            st.rerun()
 
     blocked = bool(ambiguous or unresolved)
     if st.button("Confirm and run pipeline", disabled=blocked, key="confirm"):
-        _save_and_run(utils.picks_from(annotated, choices), annotated)
+        try:
+            picks = utils.picks_from(annotated, choices)
+        except utils.ResolutionThrottled:
+            st.error(
+                "Numbeo is rate-limiting us right now (Access Restricted). Nothing "
+                "was saved - retry in a few minutes."
+            )
+        else:
+            _save_and_run(picks, annotated)
     if blocked:
         st.caption(
             "Confirm is disabled until every city is resolved. Nothing is written."
@@ -231,11 +246,20 @@ if st.session_state.city_suggestions:
 # Button outside the form
 if st.button("Submit Cities", disabled=st.session_state.city_suggestions is None):
     if st.session_state.city_suggestions:
-        annotated = utils.resolve_city_rows(st.session_state.city_suggestions)
-        st.session_state.resolution = annotated
-        # The happy path is unchanged: everything resolved means no panel.
-        if all(city["state"] == "resolved" for city in annotated):
-            _save_and_run(utils.picks_from(annotated), annotated)
+        try:
+            annotated = utils.resolve_city_rows(st.session_state.city_suggestions)
+        except utils.ResolutionThrottled:
+            annotated = None
+            st.error(
+                "Numbeo is rate-limiting us right now (Access Restricted). Nothing "
+                "was saved - your previous city list is unchanged. Retry in a few "
+                "minutes, or paste slugs manually."
+            )
+        if annotated:
+            st.session_state.resolution = annotated
+            # The happy path is unchanged: everything resolved means no panel.
+            if all(city["state"] == "resolved" for city in annotated):
+                _save_and_run(utils.picks_from(annotated), annotated)
     else:
         st.error("Please find cities first before submitting.")
 

@@ -137,12 +137,12 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** At Submit, a Numbeo throttle aborts, keeps the previous `raw_config`, shows a distinct message, and offers the manual-slug path. The ingest logs "Access Restricted" distinctly from "no data".
 
 **Acceptance criteria:**
-- [ ] A throttled submit writes nothing and says so.
-- [ ] The ingest logs a distinct line for "Access Restricted".
-- [ ] The normal no-table log is unchanged.
+- [x] A throttled submit writes nothing and says so.
+- [x] The ingest logs a distinct line for "Access Restricted".
+- [x] The normal no-table log is unchanged.
 
 **Verification:**
-- [ ] `make test` passes; a test asserts the distinct log line.
+- [x] `make test` passes; tests assert the distinct log line and the app's throttle message.
 
 **Dependencies:** Task 6.
 **Files:** `streamlit/Home.py`, `pipeline/lib/numbeo.py`, `pipeline/assets/ingest/numbeo.py`, `tests/`.
