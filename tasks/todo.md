@@ -31,13 +31,13 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** Add `resolve_city(name, country=None, fetch=None)` returning a result with `state` in `{"resolved", "ambiguous", "unresolved"}` plus the matches. Search `"<name>, <country>"` when a country is present, else the bare name; on zero results retry with the bare name (LLM countries may not match Numbeo's naming). On N matches with a country, filter labels by that country; if exactly one survives it is resolved, else ambiguous.
 
 **Acceptance criteria:**
-- [ ] 0 matches -> `unresolved`; 1 -> `resolved`; N -> `ambiguous`.
-- [ ] The country filter narrows N -> 1.
-- [ ] A country-qualified miss falls back to the bare-name search.
+- [x] 0 matches -> `unresolved`; 1 -> `resolved`; N -> `ambiguous`.
+- [x] The country filter narrows N -> 1.
+- [x] A country-qualified miss falls back to the bare-name search.
 
 **Verification:**
-- [ ] `make test` passes.
-- [ ] One test per outcome plus the country filter and the fallback.
+- [x] `make test` passes.
+- [x] One test per outcome plus the country filter and the fallback.
 
 **Dependencies:** Task 1.
 **Files:** `pipeline/lib/numbeo.py`, `tests/test_costofliving.py`.

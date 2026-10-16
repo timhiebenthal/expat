@@ -161,3 +161,76 @@ def test_canonical_slug_returns_none_when_it_cannot_parse(numbeo):
         numbeo.canonical_slug("6845", fetch=lambda *a, **k: _RedirectResponse(None))
         is None
     )
+
+
+LONDONS = [
+    {"label": "London, United Kingdom", "value": "1000"},
+    {"label": "London, Canada", "value": "2000"},
+]
+
+
+def test_resolve_city_is_unresolved_when_nothing_matches(numbeo):
+    result = numbeo.resolve_city(
+        "Nowhereville", fetch=lambda *a, **k: _JsonResponse([])
+    )
+
+    assert result.state == "unresolved"
+    assert result.matches == []
+
+
+def test_resolve_city_is_resolved_on_a_single_match(numbeo):
+    result = numbeo.resolve_city(
+        "Munich",
+        fetch=lambda *a, **k: _JsonResponse([{"label": "Munich, Germany", "value": "1111"}]),
+    )
+
+    assert result.state == "resolved"
+    assert result.matches[0]["value"] == "1111"
+
+
+def test_resolve_city_is_ambiguous_on_several_matches(numbeo):
+    result = numbeo.resolve_city(
+        "London", fetch=lambda *a, **k: _JsonResponse(LONDONS)
+    )
+
+    assert result.state == "ambiguous"
+    assert len(result.matches) == 2
+
+
+def test_resolve_city_narrows_several_matches_by_country(numbeo):
+    result = numbeo.resolve_city(
+        "London", country="Canada", fetch=lambda *a, **k: _JsonResponse(LONDONS)
+    )
+
+    assert result.state == "resolved"
+    assert result.matches == [{"label": "London, Canada", "value": "2000"}]
+
+
+def test_resolve_city_qualifies_the_search_with_the_country(numbeo):
+    seen = []
+
+    def fetch(url, **kwargs):
+        seen.append(url)
+        return _JsonResponse([{"label": "Munich, Germany", "value": "1111"}])
+
+    numbeo.resolve_city("Munich", country="Germany", fetch=fetch)
+
+    assert len(seen) == 1
+    assert "Germany" in seen[0]
+
+
+def test_resolve_city_falls_back_to_the_bare_name_when_the_country_misses(numbeo):
+    """An LLM country ("USA") may not match numbeo's naming ("United States")."""
+    seen = []
+
+    def fetch(url, **kwargs):
+        seen.append(url)
+        if "Canada" in url:
+            return _JsonResponse([])
+        return _JsonResponse([{"label": "Munich, Germany", "value": "1111"}])
+
+    result = numbeo.resolve_city("Munich", country="Canada", fetch=fetch)
+
+    assert result.state == "resolved"
+    assert len(seen) == 2
+    assert "Canada" in seen[0]

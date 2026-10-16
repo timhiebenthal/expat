@@ -5,6 +5,7 @@ caller can inject its own fetcher. Called by `pipeline/assets/ingest/numbeo.py`.
 """
 
 import logging
+from typing import NamedTuple
 from urllib.parse import quote_plus
 
 import requests
@@ -85,6 +86,41 @@ def canonical_slug(city_id, fetch=None):
         return None
     slug = location[len(NUMBEO_HOST):].strip("/").split("/")[-1]
     return slug or None
+
+
+class Resolution(NamedTuple):
+    """The outcome of matching a display name to numbeo cities.
+
+    ``state`` is "resolved" (exactly one), "ambiguous" (several - the app asks),
+    or "unresolved" (none). ``matches`` are numbeo's own ``{label, value}`` dicts.
+    """
+
+    state: str
+    matches: list
+
+
+def resolve_city(name, country=None, fetch=None):
+    """Match a display name to numbeo's cities, narrowing by country.
+
+    The country is only a hint: numbeo's naming may differ from the caller's
+    ("USA" vs "United States"), so a qualified search that finds nothing is
+    retried with the bare name.
+    """
+    matches = search_cities(f"{name}, {country}" if country else name, fetch=fetch)
+    if not matches and country:
+        matches = search_cities(name, fetch=fetch)
+
+    if not matches:
+        return Resolution("unresolved", [])
+    if len(matches) == 1:
+        return Resolution("resolved", matches)
+
+    if country:
+        narrowed = [m for m in matches if country.lower() in m["label"].lower()]
+        if len(narrowed) == 1:
+            return Resolution("resolved", narrowed)
+
+    return Resolution("ambiguous", matches)
 
 
 def get_city_data(city, fetch=None):
