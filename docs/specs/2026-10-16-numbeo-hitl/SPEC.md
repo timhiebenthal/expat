@@ -178,7 +178,7 @@ pytest, `make test`, no network. Extend the existing injectable-fetch tests in `
 - **Store both `numbeo_slug` and `numbeo_city_id`.** The id costs nothing and lets a later change bypass the dispatcher.
 - **Manual slug entry is in scope.** It is the escape hatch for a throttle or a Numbeo quirk, and one of the three options on an unresolved row.
 - **Throttling aborts the submit** and leaves the previous `raw_config` untouched; the manual-slug path is offered alongside the retry message.
-- **"Access Restricted" gets its own feedback** at Submit, and its own log line in the ingest, so mid-run throttling is never mistaken for "no data".
+- **Throttling gets its own feedback** at Submit and in the ingest. numbeo signals it two ways - a 429/403, or a 200 HTML "Access Restricted" page - and both raise `NumbeoThrottled` before `raise_for_status` can mask the first as an `HTTPError`, so mid-run throttling is never mistaken for "no data".
 
 ## Open Questions
 

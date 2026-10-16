@@ -272,8 +272,13 @@ def test_get_city_data_falls_back_to_the_naive_slug_without_one(numbeo):
     assert seen["url"].endswith("/Mexico-City")
 
 
-def test_get_city_data_flags_access_restricted_distinctly(numbeo, caplog):
-    """Throttling and 'no data' look identical on the page; the log must not."""
+def test_get_city_data_raises_when_the_page_says_access_restricted(numbeo):
+    """A 200 'Access Restricted' page is a throttle, not a missing city.
+
+    It used to be logged and treated as no data, which the ingest then reported
+    as a missing city - the two are indistinguishable on the page, so the
+    exception is the only thing that tells them apart.
+    """
     page = "<html><head><title>Access Restricted</title></head></html>"
 
     class Response:
@@ -282,10 +287,8 @@ def test_get_city_data_flags_access_restricted_distinctly(numbeo, caplog):
         def raise_for_status(self):
             pass
 
-    with caplog.at_level("WARNING"):
-        assert numbeo.get_city_data("Munich", fetch=lambda *a, **k: Response()) is None
-
-    assert "rate-limiting" in caplog.text
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.get_city_data("Munich", fetch=lambda *a, **k: Response())
 
 
 @pytest.fixture(scope="module")
@@ -370,3 +373,30 @@ def test_canonical_slug_raises_when_numbeo_throttles(numbeo):
 
     with pytest.raises(numbeo.NumbeoThrottled):
         numbeo.canonical_slug("1111", fetch=lambda *a, **k: Response())
+
+
+class _TooManyRequests:
+    """numbeo's other throttle signal: a bare 429 with no HTML body."""
+
+    status_code = 429
+    content = b""
+    headers = {}
+
+    def raise_for_status(self):
+        raise AssertionError("a 429 must be caught before raise_for_status")
+
+
+def test_search_cities_raises_on_429(numbeo):
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.search_cities("Berlin", fetch=lambda *a, **k: _TooManyRequests())
+
+
+def test_canonical_slug_raises_on_429(numbeo):
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.canonical_slug("1111", fetch=lambda *a, **k: _TooManyRequests())
+
+
+def test_get_city_data_raises_on_429(numbeo):
+    """This is the one that took the whole ingest down: raise_for_status first."""
+    with pytest.raises(numbeo.NumbeoThrottled):
+        numbeo.get_city_data("Berlin", fetch=lambda *a, **k: _TooManyRequests())

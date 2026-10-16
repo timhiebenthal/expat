@@ -24,19 +24,32 @@ CITY_URL_BASE = "https://www.numbeo.com/cost-of-living/in"
 
 
 class NumbeoThrottled(RuntimeError):
-    """numbeo served its 'Access Restricted' page instead of the endpoint."""
+    """numbeo is rate-limiting us instead of answering."""
+
+
+# numbeo signals a throttle two ways: a 429/403, or a 200 HTML "Access Restricted"
+# page. raise_for_status() turns the first into an opaque HTTPError, so the check
+# has to run before it.
+THROTTLE_STATUS = {403, 429}
 
 
 def _is_throttled(response):
-    """True when numbeo answered with its rate-limit page.
+    """True when numbeo answered with its rate-limit page rather than data.
 
-    numbeo returns a 200 HTML page for throttling, so the status code says
-    nothing and the body is the only signal.
+    That page is a 200, so the status code says nothing and the body is the signal.
     """
     content = getattr(response, "content", b"") or b""
     if isinstance(content, str):
         content = content.encode()
     return b"access restricted" in content.lower()
+
+
+def _raise_if_throttled(response, url):
+    """Raise NumbeoThrottled before raise_for_status can mask it as an HTTPError."""
+    if getattr(response, "status_code", 200) in THROTTLE_STATUS or _is_throttled(
+        response
+    ):
+        raise NumbeoThrottled(f"numbeo is rate-limiting us at '{url}'")
 
 
 def parse_table_rows(table):
@@ -81,9 +94,8 @@ def search_cities(term, fetch=None):
     fetch = fetch or requests.get
     url = f"{CITY_SEARCH_URL}?term={quote_plus(term)}"
     response = fetch(url, timeout=REQUEST_TIMEOUT)
+    _raise_if_throttled(response, url)
     response.raise_for_status()
-    if _is_throttled(response):
-        raise NumbeoThrottled(f"numbeo is rate-limiting us at '{url}'")
     return response.json()
 
 
@@ -98,12 +110,11 @@ def canonical_slug(city_id, fetch=None):
     fetch = fetch or requests.get
     url = f"{DISPATCHER_URL}?city_id={city_id}"
     response = fetch(url, timeout=REQUEST_TIMEOUT, allow_redirects=False)
+    _raise_if_throttled(response, url)
     response.raise_for_status()
 
     location = response.headers.get("Location", "")
     if not location.startswith(NUMBEO_HOST):
-        if _is_throttled(response):
-            raise NumbeoThrottled(f"numbeo is rate-limiting us at '{url}'")
         return None
     slug = location[len(NUMBEO_HOST):].strip("/").split("/")[-1]
     return slug or None
@@ -158,6 +169,7 @@ def get_city_data(city, slug=None, fetch=None):
     fetch = fetch or requests.get
     url = f"{CITY_URL_BASE}/{slug}" if slug else build_city_url(city)
     response = fetch(url, timeout=REQUEST_TIMEOUT)
+    _raise_if_throttled(response, url)
     response.raise_for_status()
     soup = BeautifulSoup(response.content, "html.parser")
     table = soup.find("table", class_=TABLE_CLASS)
@@ -166,15 +178,9 @@ def get_city_data(city, slug=None, fetch=None):
     if not table_data:
         # numbeo serves a 200 with an error page ("Cannot find city id for ...")
         # instead of the table, so the page title is the only diagnostic left.
+        # Throttling was already caught above, so this is a genuinely missing city.
         title = soup.title.text.strip() if soup.title else "no title"
-        if "access restricted" in title.lower():
-            # Throttling, not a missing city. The two are indistinguishable on
-            # the page, so the log is the only place that can tell them apart.
-            logging.warning(
-                f"numbeo is rate-limiting us at '{url}' - page says: {title}"
-            )
-        else:
-            logging.warning(f"No cost of living table at '{url}' - page says: {title}")
+        logging.warning(f"No cost of living table at '{url}' - page says: {title}")
         return None
 
     return [{"city": city, "data": table_data}]

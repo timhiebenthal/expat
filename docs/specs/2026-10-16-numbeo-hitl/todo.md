@@ -138,7 +138,7 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 
 **Acceptance criteria:**
 - [x] A throttled submit writes nothing and says so.
-- [x] The ingest logs a distinct line for "Access Restricted".
+- [x] The ingest raises `NumbeoThrottled` for a 429/403 or an "Access Restricted" page.
 - [x] The normal no-table log is unchanged.
 
 **Verification:**
