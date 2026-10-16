@@ -160,10 +160,10 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** One test drives resolution -> `apply_resolution` -> write to a scratch DuckDB `raw_config.cities` -> the ingest read, asserting the slug the app wrote is the slug the scrape URL uses.
 
 **Acceptance criteria:**
-- [ ] A single test proves the written slug reaches `/cost-of-living/in/<slug>`.
+- [x] A single test proves the written slug reaches `/cost-of-living/in/<slug>`.
 
 **Verification:**
-- [ ] `make test` passes.
+- [x] `make test` passes.
 
 **Dependencies:** Tasks 4, 5.
 **Files:** `tests/test_city_resolution.py`.

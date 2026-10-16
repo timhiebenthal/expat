@@ -43,10 +43,10 @@ Resolve each submitted city to the slug Numbeo keys it under, in the Streamlit a
 - [x] `AppTest`: happy path unchanged; ambiguous and unresolved render; Confirm disabled while blocked
 
 ### Phase 5: End to end
-- [ ] Task 8: resolution -> write -> ingest read, on a scratch warehouse
+- [x] Task 8: resolution -> write -> ingest read, on a scratch warehouse
 
 ### Checkpoint: Complete
-- [ ] Every acceptance criterion met; `make test` green; `bruin validate pipeline` clean
+- [x] Every acceptance criterion met; `make test` green; `bruin validate pipeline` clean
 
 ## Risks and Mitigations
 

@@ -260,3 +260,46 @@ def test_rename_rows_leaves_untouched_rows_alone(utils):
     updated = utils.rename_rows(annotated, {}, fetch=None)
 
     assert updated == annotated
+
+
+def test_the_slug_the_app_writes_is_the_one_the_ingest_reads(tmp_path, utils, monkeypatch):
+    """The end of the app and the start of the ingest must agree.
+
+    The app resolves and writes raw_config.cities; the ingest reads it back. If
+    the two disagreed on the column, the stored slug would never be scraped and
+    the whole feature would be inert.
+    """
+    import pandas as pd
+
+    from pipeline.assets.ingest import numbeo as ingest
+
+    annotated = [
+        {
+            "name": "Tel Aviv",
+            "country": "Israel",
+            "description": "warm",
+            "state": "resolved",
+            "matches": [{"label": "Tel Aviv-Yafo, Israel", "value": "6845"}],
+        }
+    ]
+
+    class Redirect:
+        headers = {"Location": "https://www.numbeo.comTel-Aviv-Yafo"}
+
+        def raise_for_status(self):
+            pass
+
+    picks = utils.picks_from(annotated, fetch=lambda *a, **k: Redirect())
+    rows = utils.apply_resolution(annotated, picks)
+
+    db = tmp_path / "e2e.duckdb"
+    monkeypatch.setattr(utils, "DATABASE_LOCATION", str(db))
+    utils.save_config_to_duckdb(
+        city_df=pd.DataFrame(rows),
+        jobs_df=pd.DataFrame(
+            {"job_title": ["Data Engineer"], "years_experience": [7]}
+        ),
+    )
+
+    monkeypatch.setenv("DUCKDB_LOCATION", str(db))
+    assert ingest.configured_cities() == [("Tel Aviv", "Tel-Aviv-Yafo")]
