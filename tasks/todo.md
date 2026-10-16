@@ -99,13 +99,13 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** In `streamlit/utils.py` add `load_city_slugs()` (name -> `{slug, city_id}` from `raw_config.cities`, tolerant of the old shape), `resolve_city_rows(cities)` (calls `resolve_city` per row and returns rows annotated with `state` + matches), and `apply_resolution(cities, picks)` (merges the HITL picks into final rows carrying `numbeo_slug` / `numbeo_city_id`, dropping removed rows). No Streamlit widgets in any of them.
 
 **Acceptance criteria:**
-- [ ] All three are pure functions, unit-testable without Streamlit.
-- [ ] `load_city_slugs` returns `{}` for an old-shape table.
-- [ ] `apply_resolution` attaches slug + id and drops removed rows.
+- [x] All three are pure functions, unit-testable without Streamlit.
+- [x] `load_city_slugs` returns `{}` for an old-shape table.
+- [x] `apply_resolution` attaches slug + id and drops removed rows.
 
 **Verification:**
-- [ ] `make test` passes.
-- [ ] `tests/test_city_resolution.py` covers the three.
+- [x] `make test` passes.
+- [x] `tests/test_city_resolution.py` covers the three.
 
 **Dependencies:** Task 2.
 **Files:** `streamlit/utils.py`, `tests/test_city_resolution.py`.
