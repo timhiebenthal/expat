@@ -32,15 +32,37 @@ A good or service priced in a city. Everything priced is paid for, so free items
 _Avoid_: activity, expense, line item
 
 **Frequency**:
-How many times per month a Cost item is consumed. A one-off purchase is a Frequency of 1.
+How many times per month a Household consumes a Cost item. A one-off purchase is a Frequency of 1.
 _Avoid_: count, activity count
 
 **Monthly cost**:
-A Cost item's city price multiplied by its Frequency.
+What a Household pays for a Cost item in a city: its price multiplied by its Frequency.
 
 **Cost group**:
 The bucket a Cost item is filtered by - restaurant, groceries, housing, mobility and so on.
 _Avoid_: activity type, activity category, category
+
+### Household
+
+**Household**:
+The people a comparison is run for - one person, or a couple of two Members.
+_Avoid_: group, family, user
+
+**Member**:
+One person in a Household. A Household has one or two.
+_Avoid_: person, adult, earner, partner
+
+**Shared cost item**:
+A Cost item paid once for the whole Household, so its Monthly cost does not change with the number of Members. Rent and broadband are shared.
+_Avoid_: fixed cost, household cost
+
+**Per-person cost item**:
+A Cost item every Member consumes, so its Monthly cost counts once per Member. Groceries and restaurant meals are per-person.
+_Avoid_: variable cost, additional cost, individual cost
+
+**Household income**:
+The sum of the Members' net salaries in a city. Rent is compared against it as a ratio.
+_Avoid_: combined salary, total salary
 
 ### Movement
 

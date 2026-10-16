@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype - household counts for a couple</title>
+<style>
+  :root {
+    --ink: #1c1b1a;
+    --muted: #6f6d6a;
+    --line: #e6e3df;
+    --line-soft: #f2f0ed;
+    --bg: #faf9f8;
+    --card: #ffffff;
+    --accent: #2b6cb0;
+    --accent-soft: #eef4fb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 32px 22px 90px; }
+  .tag {
+    display: inline-block; font-size: 11px; letter-spacing: .09em; text-transform: uppercase;
+    color: #8a6a2f; background: #fdf7e8; border: 1px solid #efe1bd; padding: 3px 9px; border-radius: 999px;
+  }
+  h1 { font-size: 25px; line-height: 1.25; margin: 14px 0 10px; letter-spacing: -.01em; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+  p { margin: 0 0 12px; }
+  .lede { font-size: 16px; max-width: 74ch; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin: 18px 0; }
+  .btn {
+    font: inherit; font-size: 14px; padding: 7px 13px; border-radius: 7px;
+    border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer;
+  }
+  .btn:hover { border-color: #cfcbc6; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn[disabled] { opacity: .45; cursor: default; }
+  .btn.on { background: var(--accent-soft); border-color: #b9d3ee; color: #1c4f80; font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .row + .row { margin-top: 12px; }
+  .spacer { flex: 1; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); font-weight: 600; padding: 0 8px 8px; border-bottom: 1px solid var(--line);
+  }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  tr.group td { border-bottom: 0; padding-top: 16px; font-weight: 600; font-size: 13px; }
+  td.num, th.num { text-align: right; }
+  .item-note { display: block; }
+  .chip { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .chip.member { border-color: #b9d3ee; background: var(--accent-soft); color: #1c4f80; }
+  input[type=number] {
+    width: 74px; padding: 4px 7px; text-align: right; font: inherit; font-variant-numeric: tabular-nums;
+    border: 1px solid #d9d5d0; border-radius: 6px; background: #fff;
+  }
+  input[type=number]:focus { outline: 2px solid #cfe0f2; border-color: var(--accent); }
+  .yours { color: var(--accent); font-size: 11px; margin-left: 6px; }
+  .totals { margin-top: 16px; border-top: 2px solid var(--line); padding-top: 10px; }
+  .totals div { display: flex; justify-content: space-between; padding: 3px 8px; }
+  .totals .grand { font-weight: 600; font-size: 16px; border-top: 1px solid var(--line-soft); margin-top: 6px; padding-top: 8px; }
+  .changed { margin-top: 14px; padding: 9px 12px; background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 14px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tab { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+  .tab.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  ol.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; }
+  ol.steps li { counter-increment: step; display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
+  ol.steps li::before {
+    content: counter(step); font-size: 12px; color: var(--muted); min-width: 18px;
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  ol.steps li.done button { border-style: dashed; color: var(--muted); }
+  ol.steps li.done::before { content: "\2713"; color: var(--accent); }
+  .watch { margin-top: 6px; }
+  .foot { margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="tag">throwaway prototype - not part of the app</span>
+  <h1>What should the monthly counts do when the household is a couple?</h1>
+
+  <p class="lede">
+    The counts you set per Cost item are <strong>household totals</strong>: open the analysis as a couple and
+    cappuccinos reads 8, because 4 a month is a personal habit and there are two of you. The question this demo
+    exists to settle is what happens to those numbers when the household size changes, and whether the
+    &ldquo;per Member&rdquo; label underneath each one is enough to keep them honest.
+  </p>
+  <p class="lede muted">
+    Two rules were on the table and you can still flip between them, though the demo now opens on
+    <strong>Immediately</strong>, the one worth building. <strong>Immediately</strong> - untouched counts follow the
+    household straight away. <strong>When the analysis is re-opened</strong> - the counts only follow the household
+    when the analysis is derived again, so changing the household size alone moves nothing. Your own edits
+    keep their value under both rules; the difference is only ever in the ones you never touched.
+  </p>
+  <p class="lede muted">
+    Press buttons in any order, or work through the three scenarios at the bottom. The awkward moments to look for
+    are when a number stops meaning what you thought it meant, and when a household change appears to do nothing.
+  </p>
+
+  <!-- ================= state ================= -->
+  <div class="card">
+    <h2>The household</h2>
+    <div class="row">
+      <span>Size entered in the entry mask:</span>
+      <button class="btn" data-action="members" data-value="1">Single (1 Member)</button>
+      <button class="btn" data-action="members" data-value="2">Couple (2 Members)</button>
+    </div>
+    <div class="row">
+      <span class="muted">Counts were derived for <span id="derived-for"></span>.</span>
+      <button class="btn" data-action="rederive">Re-open the analysis (re-derive)</button>
+    </div>
+    <div class="row">
+      <span>Counts follow the household:</span>
+      <button class="btn" data-action="rule" data-value="reopen">When the analysis is re-opened</button>
+      <button class="btn" data-action="rule" data-value="always">Immediately</button>
+    </div>
+    <div class="row">
+      <span class="muted" id="other-rule"></span>
+    </div>
+    <div class="changed" id="changed"></div>
+  </div>
+
+  <!-- ================= counts ================= -->
+  <div class="card">
+    <h2>Monthly counts and what they cost</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Cost item</th>
+          <th>Counted</th>
+          <th class="num">Monthly count</th>
+          <th>What that count means</th>
+          <th class="num">Monthly cost</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="totals" id="totals"></div>
+  </div>
+
+  <!-- ================= free play ================= -->
+  <div class="card">
+    <h2>Free play</h2>
+    <div class="row">
+      <button class="btn" data-action="members" data-value="1">Single</button>
+      <button class="btn" data-action="members" data-value="2">Couple</button>
+      <button class="btn" data-action="clear-edits">Drop my edits, back to the defaults</button>
+      <button class="btn" data-action="rederive">Re-open the analysis</button>
+      <button class="btn" data-action="reset">Start over</button>
+    </div>
+  </div>
+
+  <!-- ================= walkthroughs ================= -->
+  <div class="card">
+    <h2>Guided scenarios</h2>
+    <div class="tabs" id="tabs"></div>
+    <p id="walk-intro"></p>
+    <ol class="steps" id="steps"></ol>
+    <p class="muted watch" id="walk-watch"></p>
+  </div>
+
+  <p class="muted foot">
+    Not in this demo, on purpose: salaries and jobs, which city you pick, the rent you choose from the location
+    selector (shown at a fixed 1,200 EUR below), and anything the pipeline computes. This is only about the
+    monthly counts. Prices are illustrative; the item names, their Cost groups and the default counts come from
+    the real activity seed.
+  </p>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------------------
+   PURE MODEL - no DOM in this block.
+
+   This is the part worth lifting into streamlit/Home.py + Comparison.py if the
+   model holds: the counts are household totals, each Cost item is either counted
+   per Member or once for the household, and the only real question is which of
+   the two rules decides when an untouched count is allowed to move.
+   --------------------------------------------------------------------------- */
+var MEMBER = 'member';
+var HOUSEHOLD = 'household';
+
+var RENT = { name: 'Housing - 1 Bedroom Apartment', price: 1200 };
+
+var COST_ITEMS = [
+  { id: 'water',      group: 'Groceries',  name: 'Groceries - 1.5l Water',        basis: MEMBER,    seed: 30, price: 0.80 },
+  { id: 'banana',     group: 'Groceries',  name: 'Groceries - 1kg Banana',        basis: MEMBER,    seed: 1,  price: 2.00 },
+  { id: 'chicken',    group: 'Groceries',  name: 'Groceries - 1kg Chicken Filets',basis: MEMBER,    seed: 5,  price: 8.00 },
+  { id: 'cappuccino', group: 'Restaurant', name: 'Restaurant - Cappuccino',        basis: MEMBER,    seed: 4,  price: 3.50 },
+  { id: 'meal',       group: 'Restaurant', name: 'Restaurant - Basic Meal',        basis: MEMBER,    seed: 12, price: 15.00 },
+  { id: 'beer',       group: 'Restaurant', name: 'Restaurant - 0.5 Beer Draught',  basis: MEMBER,    seed: 20, price: 5.00 },
+  { id: 'mealfortwo', group: 'Restaurant', name: 'Restaurant - Mid-range Meal for 2', basis: HOUSEHOLD, seed: 4, price: 60.00,
+    note: 'Already priced and counted for two people, so it must not double.' },
+  { id: 'transport',  group: 'Mobility',   name: 'Mobility - Monthly Public Transport', basis: MEMBER, seed: 1, price: 60.00 },
+  { id: 'taxi',       group: 'Mobility',   name: 'Mobility - 1km Taxi',            basis: MEMBER,    seed: 4,  price: 3.00 },
+  { id: 'fitness',    group: 'Leisure',    name: 'Leisure - Monthly Fitness Club', basis: MEMBER,    seed: 1,  price: 40.00 },
+  { id: 'cinema',     group: 'Leisure',    name: 'Leisure - Cinema Ticket',        basis: MEMBER,    seed: 1,  price: 12.00 },
+  { id: 'utilities',  group: 'Utilities',  name: 'Utilities - Basic for 85m2 Apartment', basis: HOUSEHOLD, seed: 1, price: 200.00 },
+  { id: 'internet',   group: 'Utilities',  name: 'Utilities - Internet 60Mbps',    basis: HOUSEHOLD, seed: 1,  price: 40.00 },
+  { id: 'mobile',     group: 'Utilities',  name: 'Utilities - Mobile Phone Plan',  basis: MEMBER,    seed: 1,  price: 20.00,
+    note: 'One phone per person, inside a Cost group that is otherwise shared.' }
+];
+
+function itemById(id) {
+  return COST_ITEMS.filter(function (i) { return i.id === id; })[0];
+}
+
+function initialModel() {
+  return { members: 2, derivedFor: 2, edits: {}, rule: 'always', lastChange: null };
+}
+
+function defaultCount(item, members) {
+  return item.basis === MEMBER ? item.seed * members : item.seed;
+}
+
+function isEdited(model, id) {
+  return Object.prototype.hasOwnProperty.call(model.edits, id);
+}
+
+/** The count shown for an item under a given rule. */
+function countFor(item, model, rule) {
+  if (isEdited(model, item.id)) return model.edits[item.id];
+  var members = rule === 'always' ? model.members : model.derivedFor;
+  return defaultCount(item, members);
+}
+
+function otherRule(rule) {
+  return rule === 'always' ? 'reopen' : 'always';
+}
+
+/** What a household count means per Member. Shared items get no per-Member figure. */
+function meaning(item, count, members) {
+  if (item.basis !== MEMBER) return 'shared - paid once for the household';
+  var per = count / members;
+  return (isWhole(per) ? per : Math.round(per * 100) / 100) + ' per Member';
+}
+
+function isWhole(n) { return Math.abs(n - Math.round(n)) < 1e-9; }
+
+function costOf(item, count) { return item.price * count; }
+
+/** Everything the page needs, for the displayed rule and for the other one. */
+function summary(model, rule) {
+  var r = rule || model.rule;
+  var rows = COST_ITEMS.map(function (item) {
+    var count = countFor(item, model, r);
+    return { item: item, count: count, cost: costOf(item, count), edited: isEdited(model, item.id) };
+  });
+  var other = rows.reduce(function (a, row) { return a + row.cost; }, 0);
+  return { rows: rows, other: other, total: other + RENT.price };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { COST_ITEMS: COST_ITEMS, RENT: RENT, MEMBER: MEMBER, HOUSEHOLD: HOUSEHOLD,
+    initialModel: initialModel, defaultCount: defaultCount, countFor: countFor, otherRule: otherRule,
+    meaning: meaning, costOf: costOf, summary: summary, itemById: itemById, isEdited: isEdited };
+}
+</script>
+
+<script>
+/* ---------------------------------------------------------------------------
+   PAGE SHELL - throwaway. Renders MODEL and dispatches clicks into it.
+   --------------------------------------------------------------------------- */
+(function () {
+  if (typeof module !== 'undefined' && module.exports) return; // node smoke test only
+
+  var model = initialModel();
+  var walk = { tab: 0, step: 0 };
+
+  var money = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  var money2 = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 });
+
+  function eur(n) { return money.format(Math.round(n)); }
+
+  /* ---------- actions ---------- */
+  function setMembers(n) {
+    model.members = n;
+    model.lastChange = 'The household is now ' + (n === 1 ? 'a single person' : 'a couple') + '. ' +
+      (model.rule === 'reopen'
+        ? 'The counts do not move until the analysis is re-opened.'
+        : 'Untouched counts followed it; yours stayed put.');
+  }
+  function rederive() {
+    model.derivedFor = model.members;
+    model.lastChange = 'Analysis re-opened. Defaults derived again for ' +
+      (model.members === 1 ? '1 Member' : '2 Members') + '.';
+  }
+  function setRule(rule) {
+    model.rule = rule;
+    model.lastChange = rule === 'always'
+      ? 'Rule changed: untouched counts now follow the household immediately.'
+      : 'Rule changed: counts only move when the analysis is re-opened.';
+  }
+  function edit(id, value) {
+    model.edits[id] = value;
+    var item = itemById(id);
+    model.lastChange = 'You set ' + item.name + ' to ' + value + '. ' +
+      (item.basis === MEMBER
+        ? 'That is ' + meaning(item, value, model.members) + ' at this household size.'
+        : 'It is a shared item, so it stays a single household figure.');
+  }
+  function clearEdits() {
+    model.edits = {};
+    model.lastChange = 'Your edits dropped. Every count is back to the default for the household they were derived for.';
+  }
+  function resetAll(patch) {
+    var fresh = initialModel();
+    for (var k in patch) fresh[k] = patch[k];
+    model = fresh;
+  }
+
+  /* ---------- rendering ---------- */
+  function render() {
+    document.getElementById('derived-for').textContent =
+      model.derivedFor === 1 ? '1 Member' : '2 Members';
+    document.querySelectorAll('[data-action="members"]').forEach(function (b) {
+      b.classList.toggle('on', Number(b.dataset.value) === model.members);
+    });
+    document.querySelectorAll('[data-action="rule"]').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.value === model.rule);
+    });
+
+    var alt = summary(model, otherRule(model.rule));
+    document.getElementById('other-rule').textContent =
+      'Under the other rule, other monthly cost would be ' + eur(alt.other) +
+      ' (it is ' + eur(summary(model).other) + ' now).';
+
+    document.getElementById('changed').textContent = model.lastChange || 'Press something to begin.';
+
+    renderRows();
+    renderTotals();
+    renderWalkthrough();
+  }
+
+  function renderRows() {
+    var s = summary(model);
+    var html = '';
+    var group = null;
+    var subtotal = 0;
+
+    s.rows.forEach(function (row, idx) {
+      if (row.item.group !== group) {
+        if (group !== null) {
+          html += '<tr class="group"><td colspan="4"></td><td class="num">' + eur(subtotal) + ' · ' + group + '</td></tr>';
+        }
+        group = row.item.group;
+        subtotal = 0;
+      }
+      subtotal += row.cost;
+
+      var last = idx === s.rows.length - 1;
+      html += '<tr>' +
+        '<td>' + row.item.name + (row.item.note ? '<span class="item-note muted">' + row.item.note + '</span>' : '') + '</td>' +
+        '<td><span class="chip ' + row.item.basis + '">' + (row.item.basis === MEMBER ? 'per Member' : 'shared') + '</span></td>' +
+        '<td class="num"><input type="number" min="0" max="400" step="1" data-item="' + row.item.id + '" value="' + row.count + '">' +
+          (row.edited ? '<span class="yours">yours</span>' : '') + '</td>' +
+        '<td id="meaning-' + row.item.id + '">' + meaning(row.item, row.count, model.members) + '</td>' +
+        '<td class="num" id="cost-' + row.item.id + '">' + money2.format(row.cost) + '</td>' +
+        '</tr>';
+
+      if (last) {
+        html += '<tr class="group"><td colspan="4"></td><td class="num">' + eur(subtotal) + ' · ' + group + '</td></tr>';
+      }
+    });
+
+    document.getElementById('rows').innerHTML = html;
+  }
+
+  function renderTotals() {
+    var s = summary(model);
+    document.getElementById('totals').innerHTML =
+      '<div><span>Other monthly cost <span class="muted">(the counts above)</span></span><span>' + eur(s.other) + '</span></div>' +
+      '<div><span>' + RENT.name + ' <span class="muted">(chosen in the location selector)</span></span><span>' + eur(RENT.price) + '</span></div>' +
+      '<div class="grand"><span>Total monthly cost</span><span>' + eur(s.total) + '</span></div>';
+  }
+
+  /* Live update while typing: rebuild only the derived cells, so the input keeps focus. */
+  function refreshDerived() {
+    var s = summary(model);
+    s.rows.forEach(function (row) {
+      var m = document.getElementById('meaning-' + row.item.id);
+      var c = document.getElementById('cost-' + row.item.id);
+      if (m) m.textContent = meaning(row.item, row.count, model.members);
+      if (c) c.textContent = money2.format(row.cost);
+    });
+    renderTotals();
+    var alt = summary(model, otherRule(model.rule));
+    document.getElementById('other-rule').textContent =
+      'Under the other rule, other monthly cost would be ' + eur(alt.other) +
+      ' (it is ' + eur(s.other) + ' now).';
+    document.getElementById('changed').textContent = model.lastChange || '';
+  }
+
+  /* ---------- scenario 1 step 1: start as a couple, you set the habit -> switch to single, then re-open. ---------- */
+  function startFresh(patch) {
+    resetAll(patch);
+    model.lastChange = patch.lastChange || 'Starting fresh.';
+  }
+
+  var WALKTHROUGHS = [
+    {
+      title: 'Both partners work',
+      intro: 'The plain case: a couple, nothing edited, counts opened for two people.',
+      watch: 'Watch the two columns that disagree: cappuccinos opens at 8 because 4 a month is personal, ' +
+             'while broadband stays at 1 because it is one connection for the flat.',
+      steps: [
+        { label: 'Start as a couple', run: function () { startFresh({ members: 2, derivedFor: 2 }); } },
+        { label: 'Re-open the analysis', run: function () { rederive(); } }
+      ]
+    },
+    {
+      title: 'Yours for the keeping',
+      intro: 'You are the coffee drinker: the household drinks 40 cappuccinos a month, not 8. Then the household changes.',
+      watch: 'Your 40 never moves - under either rule. What moves is what it is said to mean: as a couple it is 20 per ' +
+             'Member, on your own it is 40 per Member. The untouched boxes are where the two rules part company.',
+      steps: [
+        { label: 'Start as a couple, 8 cappuccinos, then set it to 40', run: function () {
+            startFresh({ members: 2, derivedFor: 2, lastChange: 'A couple, with the default 8 cappuccinos.' });
+            edit('cappuccino', 40);
+        } },
+        { label: 'Switch the household to Single', run: function () { setMembers(1); } },
+        { label: 'Re-open the analysis', run: function () { rederive(); } },
+        { label: 'Switch back to Couple, without re-opening', run: function () { setMembers(2); } }
+      ]
+    },
+    {
+      title: 'The two exceptions',
+      intro: 'One Cost item that must not double, and one inside a shared Cost group that must.',
+      watch: 'Meal for Two stays at 4 through the household change. The mobile phone plan goes 1 to 2, even though it ' +
+             'sits in the same group as the flat utilities.',
+      steps: [
+        { label: 'Start as a single person', run: function () { startFresh({ members: 1, derivedFor: 1 }); } },
+        { label: 'Make it a couple', run: function () { setMembers(2); } },
+        { label: 'Re-open the analysis', run: function () { rederive(); } }
+      ]
+    }
+  ];
+
+  function renderWalkthrough() {
+    var tabs = WALKTHROUGHS.map(function (w, i) {
+      return '<button class="tab' + (i === walk.tab ? ' on' : '') + '" data-action="tab" data-value="' + i + '">' + w.title + '</button>';
+    }).join('');
+    document.getElementById('tabs').innerHTML = tabs;
+
+    var w = WALKTHROUGHS[walk.tab];
+    document.getElementById('walk-intro').textContent = w.intro;
+    document.getElementById('walk-watch').textContent = 'What to watch for: ' + w.watch;
+
+    document.getElementById('steps').innerHTML = w.steps.map(function (step, i) {
+      var state = i < walk.step ? 'done' : (i === walk.step ? 'now' : 'later');
+      var disabled = state === 'now' ? '' : ' disabled';
+      return '<li class="' + state + '"><button class="btn' + (state === 'now' ? ' primary' : '') + '" data-action="step" data-value="' + i + '"' + disabled + '>' +
+        step.label + '</button></li>';
+    }).join('');
+  }
+
+  function startWalkthrough(i) {
+    walk.tab = i;
+    walk.step = 0;
+    startFresh({ lastChange: 'Scenario ready. Press the first button.' });
+    render();
+  }
+
+  /* ---------- wiring ---------- */
+  document.addEventListener('click', function (event) {
+    var el = event.target.closest('[data-action]');
+    if (!el) return;
+    var action = el.dataset.action;
+    var value = el.dataset.value;
+
+    if (action === 'members') setMembers(Number(value));
+    else if (action === 'rederive') rederive();
+    else if (action === 'rule') setRule(value);
+    else if (action === 'clear-edits') clearEdits();
+    else if (action === 'reset') { startFresh({ lastChange: 'Back to the start: a couple, nothing edited.' }); }
+    else if (action === 'tab') { startWalkthrough(Number(value)); return; }
+    else if (action === 'step') {
+      if (Number(value) !== walk.step) return;
+      WALKTHROUGHS[walk.tab].steps[walk.step].run();
+      walk.step = Math.min(walk.step + 1, WALKTHROUGHS[walk.tab].steps.length);
+    }
+    render();
+  });
+
+  document.addEventListener('input', function (event) {
+    var input = event.target.closest('input[data-item]');
+    if (!input) return;
+    var raw = input.value === '' ? 0 : Number(input.value);
+    if (!isFinite(raw)) return;
+    edit(input.dataset.item, Math.max(0, Math.round(raw)));
+    refreshDerived();
+  });
+
+  startFresh({ lastChange: 'Welcome. Free play is above; the three scenarios are below.' });
+  render();
+})();
+</script>
+</body>
+</html>
