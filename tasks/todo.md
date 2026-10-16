@@ -38,16 +38,16 @@ Export `PATH="$HOME/.local/bin:$PATH"` and `DUCKDB_LOCATION=database/dwh.duckdb`
 **Description:** Rework `materialize()` in `pipeline/assets/ingest/numbeo.py`. Read the existing `raw_numbeo.cost_of_living` (tolerating the table being absent, or having no `scraped_at` column), call `plan_scrapes`, fetch only the planned cities with `get_city_data`, stamp `scraped_at` on the fresh rows, and return stored plus fresh rows. A refresh that returns no table keeps that city's stored rows and logs a warning. The zero-rows `RuntimeError` guard stays.
 
 **Acceptance criteria:**
-- [ ] A run whose cities are all fresh makes no fetch at all.
-- [ ] A city with no rows, or stale rows, is fetched and stamped with the current time.
-- [ ] Stored rows are returned unchanged, so the written table is the union.
-- [ ] A table with no `scraped_at` column still runs (fetch everything once).
-- [ ] A throttled refresh raises `NumbeoThrottled`; nothing is written.
-- [ ] Every returned row carries `scraped_at`.
+- [x] A run whose cities are all fresh makes no fetch at all.
+- [x] A city with no rows, or stale rows, is fetched and stamped with the current time.
+- [x] Stored rows are returned unchanged, so the written table is the union.
+- [x] A table with no `scraped_at` column still runs (fetch everything once).
+- [x] A throttled refresh raises `NumbeoThrottled`; nothing is written.
+- [x] Every returned row carries `scraped_at`.
 
 **Verification:**
-- [ ] `make test` passes; fixture-warehouse tests cover each case.
-- [ ] Manual: `bruin run pipeline/assets/ingest/numbeo.py --workers 1` against a scratch copy (deferred while numbeo throttles this IP).
+- [x] `make test` passes; fixture-warehouse tests cover each case.
+- Deferred: a live `bruin run pipeline/assets/ingest/numbeo.py` - numbeo is throttling this IP until 1 Nov.
 
 **Dependencies:** Task 1.
 **Files:** `pipeline/assets/ingest/numbeo.py`, `tests/test_costofliving.py`.

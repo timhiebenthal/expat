@@ -24,10 +24,10 @@ Make `raw_numbeo.cost_of_living` remember what it already scraped, so a run only
 - [x] `make test` passes; fresh / stale / missing / old-shape cases covered
 
 ### Phase 2: The ingest
-- [ ] Task 2: read stored rows, fetch only the planned set, stamp `scraped_at`
+- [x] Task 2: read stored rows, fetch only the planned set, stamp `scraped_at`
 
 ### Checkpoint: Ingest
-- [ ] A fresh city is not fetched; a stale or new one is, and is stamped
+- [x] A fresh city is not fetched; a stale or new one is, and is stamped
 
 ### Phase 3: Proof
 - [ ] Task 3: two runs, the second makes zero requests

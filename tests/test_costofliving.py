@@ -454,3 +454,186 @@ def test_plan_scrapes_keeps_the_configured_order(numbeo):
     assert numbeo.plan_scrapes(
         [("Tel Aviv", "Tel-Aviv-Yafo"), ("Munich", "Munich")], [], now
     ) == [("Tel Aviv", "Tel-Aviv-Yafo"), ("Munich", "Munich")]
+
+
+def _scratch_scrape_db(tmp_path, *, cities, stored):
+    """A scratch warehouse with the config and, optionally, stored scrape rows."""
+    import duckdb
+
+    db = tmp_path / "scrape.duckdb"
+    con = duckdb.connect(str(db))
+    con.execute("create schema raw_config")
+    con.execute("create table raw_config.cities (name varchar, numbeo_slug varchar)")
+    for name, slug in cities:
+        con.execute("insert into raw_config.cities values (?, ?)", [name, slug])
+    if stored is not None:
+        con.execute("create schema raw_numbeo")
+        con.execute(
+            "create table raw_numbeo.cost_of_living "
+            "(city varchar, category varchar, cost varchar, scraped_at timestamp)"
+        )
+        for row in stored:
+            con.execute(
+                "insert into raw_numbeo.cost_of_living values (?, ?, ?, ?)",
+                [row["city"], row["category"], row["cost"], row["scraped_at"]],
+            )
+    con.close()
+    return str(db)
+
+
+def test_materialize_reuses_fresh_rows_without_fetching(tmp_path, monkeypatch, ingest):
+    monkeypatch.setenv(
+        "DUCKDB_LOCATION",
+        _scratch_scrape_db(
+            tmp_path,
+            cities=[("Berlin", "Berlin")],
+            stored=[
+                {
+                    "city": "Berlin",
+                    "category": "Meal",
+                    "cost": "15 €",
+                    "scraped_at": datetime.now(),
+                }
+            ],
+        ),
+    )
+
+    def explode(*a, **k):
+        raise AssertionError("a fresh city must not be fetched")
+
+    monkeypatch.setattr(ingest, "get_city_data", explode)
+
+    rows = ingest.materialize()
+
+    assert [(r["city"], r["category"], r["cost"]) for r in rows] == [
+        ("Berlin", "Meal", "15 €")
+    ]
+
+
+def test_materialize_fetches_and_stamps_a_city_with_no_rows(
+    tmp_path, monkeypatch, ingest
+):
+    monkeypatch.setenv(
+        "DUCKDB_LOCATION",
+        _scratch_scrape_db(tmp_path, cities=[("Berlin", "Berlin")], stored=[]),
+    )
+    monkeypatch.setattr(
+        ingest,
+        "get_city_data",
+        lambda city, slug=None, fetch=None: [
+            {"city": city, "data": [{"category": "Meal", "cost": "15 €"}]}
+        ],
+    )
+
+    rows = ingest.materialize()
+
+    assert (rows[0]["city"], rows[0]["category"], rows[0]["cost"]) == (
+        "Berlin",
+        "Meal",
+        "15 €",
+    )
+    assert isinstance(rows[0]["scraped_at"], datetime)
+
+
+def test_materialize_fetches_a_city_older_than_the_ttl(tmp_path, monkeypatch, ingest):
+    monkeypatch.setenv(
+        "DUCKDB_LOCATION",
+        _scratch_scrape_db(
+            tmp_path,
+            cities=[("Berlin", "Berlin")],
+            stored=[
+                {
+                    "city": "Berlin",
+                    "category": "Meal",
+                    "cost": "old",
+                    "scraped_at": datetime.now() - timedelta(days=200),
+                }
+            ],
+        ),
+    )
+    monkeypatch.setattr(
+        ingest,
+        "get_city_data",
+        lambda city, slug=None, fetch=None: [
+            {"city": city, "data": [{"category": "Meal", "cost": "new"}]}
+        ],
+    )
+
+    rows = ingest.materialize()
+
+    assert rows[0]["cost"] == "new"
+
+
+def test_materialize_keeps_stored_rows_when_a_refresh_returns_nothing(
+    tmp_path, monkeypatch, ingest, caplog
+):
+    """numbeo has no table right now: keep what we have rather than drop the city."""
+    monkeypatch.setenv(
+        "DUCKDB_LOCATION",
+        _scratch_scrape_db(
+            tmp_path,
+            cities=[("Berlin", "Berlin")],
+            stored=[
+                {
+                    "city": "Berlin",
+                    "category": "Meal",
+                    "cost": "old",
+                    "scraped_at": datetime.now() - timedelta(days=200),
+                }
+            ],
+        ),
+    )
+    monkeypatch.setattr(ingest, "get_city_data", lambda *a, **k: None)
+
+    with caplog.at_level("WARNING"):
+        rows = ingest.materialize()
+
+    assert rows[0]["cost"] == "old"
+    assert "Could not refresh Berlin" in caplog.text
+
+
+def test_materialize_fetches_everything_when_the_table_has_no_timestamp(
+    tmp_path, monkeypatch, ingest
+):
+    import duckdb
+
+    db = tmp_path / "old.duckdb"
+    con = duckdb.connect(str(db))
+    con.execute("create schema raw_config")
+    con.execute("create table raw_config.cities (name varchar, numbeo_slug varchar)")
+    con.execute("insert into raw_config.cities values ('Berlin', 'Berlin')")
+    con.execute("create schema raw_numbeo")
+    con.execute(
+        "create table raw_numbeo.cost_of_living (city varchar, category varchar, cost varchar)"
+    )
+    con.execute("insert into raw_numbeo.cost_of_living values ('Berlin', 'Meal', 'old')")
+    con.close()
+    monkeypatch.setenv("DUCKDB_LOCATION", str(db))
+    monkeypatch.setattr(
+        ingest,
+        "get_city_data",
+        lambda city, slug=None, fetch=None: [
+            {"city": city, "data": [{"category": "Meal", "cost": "new"}]}
+        ],
+    )
+
+    rows = ingest.materialize()
+
+    assert rows[0]["cost"] == "new"
+    assert "scraped_at" in rows[0]
+
+
+def test_materialize_propagates_a_throttled_refresh(tmp_path, monkeypatch, ingest, numbeo):
+    """A throttle must stop the run, not write a partial table."""
+    monkeypatch.setenv(
+        "DUCKDB_LOCATION",
+        _scratch_scrape_db(tmp_path, cities=[("Berlin", "Berlin")], stored=[]),
+    )
+
+    def throttled(*a, **k):
+        raise numbeo.NumbeoThrottled("numbeo is rate-limiting us")
+
+    monkeypatch.setattr(ingest, "get_city_data", throttled)
+
+    with pytest.raises(numbeo.NumbeoThrottled):
+        ingest.materialize()
