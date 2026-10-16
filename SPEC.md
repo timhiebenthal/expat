@@ -37,6 +37,36 @@ Stated up front; correct them before planning.
 - The ingest reads `select name from raw_config.cities` and calls `get_city_data(name)` (`pipeline/assets/ingest/numbeo.py`).
 - `get_city_data` already logs the URL and page title when there is no table (`pipeline/lib/numbeo.py`), which is how the Tel Aviv failure is diagnosable at all.
 
+## Resolution flow
+
+HITL and the hard-fail are not alternatives; they sit at opposite ends of one flow. HITL runs at Submit, before anything is written, so an unresolved city never enters `raw_config`. The hard-fail runs later, in the pipeline, and is the backstop for a city that was fine at Submit and stops resolving afterwards.
+
+```mermaid
+flowchart TD
+    A["Find Cities"] --> B["LLM suggests cities"]
+    B --> C["Editable table (name, country, description)"]
+    C --> D["Submit Cities - app boundary"]
+    D --> E{"CitySearchJson(name)"}
+    E -->|0 matches| F[unresolved]
+    E -->|1 match| G[resolved]
+    E -->|N matches| H{"country filter"}
+    E -->|Access Restricted| X["ABORT submit - keep previous raw_config"]
+    H -->|narrows to 1| G
+    H -->|still N| I[ambiguous]
+    F --> J["HITL panel, separate from the table: rename / remove / paste slug"]
+    I --> J
+    J --> K{"all resolved?"}
+    K -->|no| L["block submit - nothing written"]
+    K -->|yes| M["write raw_config.cities + numbeo_slug, numbeo_city_id"]
+    M --> N["run_pipeline()"]
+    N --> O["ingest reads numbeo_slug -> scrape /cost-of-living/in/slug"]
+    O --> P{"every city has a row?"}
+    P -->|yes| Q[dashboard]
+    P -->|no| R["PIPELINE FAILS - backstop: rename / throttle / CLI run / stale table"]
+```
+
+The HITL panel answers "is this city resolvable now". The check answers "did everything still resolve at run time".
+
 ## Tech Stack
 
 Unchanged: Streamlit, DuckDB at `$DUCKDB_LOCATION`, the pinned Bruin CLI, pytest. No new Python dependency - Numbeo is called with the `requests` already in use.
@@ -66,6 +96,7 @@ pipeline/lib/numbeo.py            + search_cities, canonical_slug, resolve_city;
                                     get_city_data(city, slug=None) prefers a stored slug
 streamlit/utils.py                + load_city_slugs, resolve_city_rows, apply_resolution
 streamlit/Home.py                 Submit gate: resolve, then happy path or HITL panel
+streamlit/prototypes/numbeo_hitl_prototype.py   throwaway HITL mock (no API, no LLM)
 pipeline/assets/ingest/numbeo.py  read name + numbeo_slug, pass the slug through
 tests/test_costofliving.py        resolution: 0/1/N matches, country filter, fallback
 tests/test_app_smoke.py           the Submit gate's happy path and its HITL path
@@ -127,6 +158,7 @@ pytest, `make test`, no network. Extend the existing injectable-fetch tests in `
 - Tel Aviv submits, resolves to `Tel-Aviv-Yafo`, and the pipeline passes with no `SLUG_OVERRIDES` entry.
 - A name that matches nothing blocks the submit for that row; the user can rename, remove, or paste a slug.
 - A name with several matches shows a picker with full labels; the country filter narrows first, and Numbeo's first result is the pre-selected default (not presented as truth).
+- The resolution panel renders on the same page as the editor but as its own widgets, and "Confirm and run pipeline" stays disabled until every city is resolved.
 - `numbeo_slug` is persisted on the row and the ingest prefers it; the scrape makes one request per city in steady state.
 - An old-shape `raw_config.cities` (no slug column) still runs.
 - `make test` passes, with the resolution paths covered.
@@ -140,9 +172,15 @@ pytest, `make test`, no network. Extend the existing injectable-fetch tests in `
 - The Comparison page and its `config.yml` path.
 - A "force re-resolve all cities" affordance (deferred; rename the city to re-resolve in v1).
 
+## Settled during specification
+
+- **HITL lives on the same page, in its own panel - not inside the editable table.** The editor stays a plain `st.data_editor` of name / country / description. The resolution surface renders below it as its own widgets: a radio per ambiguous city, and rename / paste-slug / remove per unresolved city, with a "Confirm and run pipeline" button disabled until every city resolves. A throwaway mock is committed at `streamlit/prototypes/numbeo_hitl_prototype.py` (stubbed Numbeo, no LLM, no writes).
+- **Store both `numbeo_slug` and `numbeo_city_id`.** The id costs nothing and lets a later change bypass the dispatcher.
+- **Manual slug entry is in scope.** It is the escape hatch for a throttle or a Numbeo quirk, and one of the three options on an unresolved row.
+- **Throttling aborts the submit** and leaves the previous `raw_config` untouched; the manual-slug path is offered alongside the retry message.
+- **"Access Restricted" gets its own feedback** at Submit, and its own log line in the ingest, so mid-run throttling is never mistaken for "no data".
+
 ## Open Questions
 
-1. HITL surface: a picker rendered inline under the existing editor, or a separate confirm step that only appears when something is ambiguous or unresolved? Inline is less stateful; a confirm step is easier to test and keeps the editor from drifting mid-wizard.
-2. Store `numbeo_city_id` as well as `numbeo_slug`, or slug only? The id is only useful if we later want to bypass the dispatcher.
-3. On a Numbeo throttle at Submit ("Access Restricted"), abort the submit and keep the previous `raw_config`, or allow the user to paste slugs manually? The abort is safer; the manual path is an escape hatch worth having.
-4. Should the ingest emit a distinct log line when the page title contains "Access Restricted", so mid-run throttling is distinguishable from "no data"? Currently the two look identical.
+1. Tolerate the old `raw_config.cities` shape (no slug column) indefinitely, or run a one-line `ALTER TABLE` on first use instead? Assumption 6 says tolerate; confirm.
+2. Should a "force re-resolve all cities" control ship in v1, or is rename-to-re-resolve enough? Currently deferred.
