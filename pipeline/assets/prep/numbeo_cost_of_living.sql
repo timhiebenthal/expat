@@ -20,6 +20,11 @@ tags:
 -- flattened it). The Cost group mapping keeps its four overrides, and the group
 -- column stays collapsed into activity_category rather than being duplicated.
 --
+-- counted_for says whose count the Cost item's Frequency is: one Member's, or
+-- the whole Household's. The Cost group decides it, and a blank in the seed means
+-- "take the group's default", so only the exceptions state one. An unknown group
+-- falls to household, the direction that never multiplies a cost by mistake.
+--
 -- activity_count is cast to INTEGER because the CSV seed loads it as BIGINT,
 -- while dbt's seed was INTEGER and the entity columns keep that type.
 with
@@ -69,6 +74,17 @@ with
                 then '3 Room Appart. Outside'
                 else mapping.activity_type
             end as activity_category,
+            coalesce(
+                nullif(mapping.counted_for, ''),
+                case
+                    when
+                        mapping.activity_type in (
+                            'Groceries', 'Restaurant', 'Mobility', 'Leisure', 'Clothing'
+                        )
+                    then 'person'
+                    else 'household'
+                end
+            ) as counted_for,
             cast(mapping.activity_count as integer) as monthly_activity_count,
             data.cost_value
             * cast(mapping.activity_count as integer) as monthly_activity_cost

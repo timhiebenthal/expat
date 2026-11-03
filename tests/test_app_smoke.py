@@ -67,7 +67,7 @@ def gate(monkeypatch):
     monkeypatch.setattr(
         utils,
         "save_config_to_duckdb",
-        lambda city_df, jobs_df: calls.update(saved=city_df),
+        lambda city_df, jobs_df, members: calls.update(saved=city_df),
     )
     monkeypatch.setattr(utils, "run_pipeline", lambda: calls.update(ran=True) or True)
     monkeypatch.setattr(st, "switch_page", lambda *a, **k: None)
@@ -147,6 +147,69 @@ def test_gate_blocks_the_write_and_shows_the_panel(gate):
     assert any("no match" in w.value for w in at.warning)
 
 
+def test_gate_opens_once_an_ambiguous_city_is_picked(gate):
+    """A choice on the ambiguous row is what unblocks Confirm - not a re-resolve."""
+    build, calls = gate
+    at = build(
+        [
+            {
+                "name": "London",
+                "country": "United Kingdom",
+                "description": "favourite",
+                "state": "ambiguous",
+                "matches": [
+                    {"label": "London, United Kingdom", "value": "2"},
+                    {"label": "Londonderry (Derry), United Kingdom", "value": "3"},
+                ],
+            }
+        ]
+    )
+
+    _submit(at)
+
+    # Nothing is preselected: the pick is the decision, and the gate stays shut
+    # until it is made.
+    radio = next(r for r in at.radio if r.key == "amb-London")
+    assert radio.value is None
+    confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
+    assert confirm.disabled is True
+
+    radio.set_value("London, United Kingdom").run()
+
+    confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
+    assert confirm.disabled is False
+    confirm.click().run()
+    assert "saved" in calls
+
+
+def test_gate_opens_once_an_unmatched_city_is_dropped(gate):
+    """Removing the row is a decision, so it settles the city like a pick does."""
+    build, calls = gate
+    at = build(
+        [
+            {
+                "name": "Nowhereville",
+                "country": "",
+                "description": "made up",
+                "state": "unresolved",
+                "matches": [],
+            }
+        ]
+    )
+
+    _submit(at)
+
+    confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
+    assert confirm.disabled is True
+
+    next(c for c in at.checkbox if c.key == "drop-Nowhereville").check().run()
+
+    confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
+    assert confirm.disabled is False
+    confirm.click().run()
+    assert "saved" in calls
+
+
 def test_gate_reports_a_throttle_and_writes_nothing(gate):
     build, calls = gate
     at = build([], throttle=True)
@@ -155,3 +218,11 @@ def test_gate_reports_a_throttle_and_writes_nothing(gate):
 
     assert "saved" not in calls
     assert any("rate-limiting" in e.value for e in at.error)
+
+
+def test_app_offers_the_household_to_choose(app):
+    """The entry mask is where the Member count is entered, not inferred."""
+    radios = {radio.label: list(radio.options) for radio in app.radio}
+
+    assert radios, "no radio rendered"
+    assert ["Single", "Couple"] in radios.values(), radios

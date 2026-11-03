@@ -33,10 +33,14 @@ st.markdown(
 if "city_suggestions" not in st.session_state:
     st.session_state.city_suggestions = None
 
+if "members" not in st.session_state:
+    # What the entry mask opens on: the household submitted last time, or one
+    # Member. Read without a warehouse existing, since this page renders before
+    # the pipeline has ever run.
+    st.session_state["members"] = utils.load_members()
+
 if "jobs_df" not in st.session_state:
-    st.session_state.jobs_df = pd.DataFrame(
-        {"Job Title": ["Data Engineer"], "Years of Experience": [7]}
-    )
+    st.session_state.jobs_df = utils.jobs_editor_default(st.session_state["members"])
 
 # Set on Submit; holds the annotated resolution while the panel is on screen.
 if "resolution" not in st.session_state:
@@ -80,11 +84,13 @@ def retrieve_city_suggestions(form_dict):
     return cities
 
 
-def _save_and_run(picks, annotated):
+def _save_and_run(picks, annotated, jobs_df):
     """Write the resolved rows, then run the pipeline - the happy path."""
     rows = utils.apply_resolution(annotated, picks)
     utils.save_config_to_duckdb(
-        city_df=pd.DataFrame(rows), jobs_df=st.session_state.jobs_df
+        city_df=pd.DataFrame(rows),
+        jobs_df=jobs_df,
+        members=st.session_state["members"],
     )
     save_success = st.success("Data saved successfully!")
     time.sleep(1)
@@ -128,13 +134,20 @@ def _render_resolution_panel(annotated):
         for city in ambiguous:
             labels = [m["label"] for m in city["matches"]]
             picked = st.radio(
-                f"Which **{city['name']}**?", labels, index=0, key=f"amb-{city['name']}"
+                f"Which **{city['name']}**?",
+                labels,
+                index=None,
+                key=f"amb-{city['name']}",
             )
-            choices[city["name"]] = {
-                "city_id": next(
-                    m["value"] for m in city["matches"] if m["label"] == picked
-                )
-            }
+            choices[city["name"]] = (
+                {
+                    "city_id": next(
+                        m["value"] for m in city["matches"] if m["label"] == picked
+                    )
+                }
+                if picked is not None
+                else {}
+            )
 
     if unresolved:
         st.warning(
@@ -175,7 +188,7 @@ def _render_resolution_panel(annotated):
         else:
             st.rerun()
 
-    blocked = bool(ambiguous or unresolved)
+    blocked = not utils.is_settled(annotated, choices)
     if st.button("Confirm and run pipeline", disabled=blocked, key="confirm"):
         try:
             picks = utils.picks_from(annotated, choices)
@@ -185,7 +198,11 @@ def _render_resolution_panel(annotated):
                 "was saved - retry in a few minutes."
             )
         else:
-            _save_and_run(picks, annotated)
+            _save_and_run(
+                picks,
+                annotated,
+                utils.jobs_with_titles(st.session_state.jobs_df),
+            )
     if blocked:
         st.caption(
             "Confirm is disabled until every city is resolved. Nothing is written."
@@ -206,6 +223,17 @@ with st.form("inputs") as form_inputs:
         placeholder="I want to live in a vibrant city with good public transportation and warm/hot weather.\nFeeling safe at night is also important to me.",
     )
 
+    household_choice = st.radio(
+        "Who is this comparison for?",
+        ["Single", "Couple"],
+        index=st.session_state["members"] - 1,
+        horizontal=True,
+        help=(
+            "A couple has two Members. Add a second job row to benchmark both "
+            "incomes; a row without a job title is ignored."
+        ),
+    )
+
     st.markdown(
         "Please provide some Job titles and years of experience which are relevant for this benchmark"
     )
@@ -219,6 +247,7 @@ with st.form("inputs") as form_inputs:
     submitted = st.form_submit_button("Find Cities")
 
     if submitted:
+        st.session_state["members"] = 1 if household_choice == "Single" else 2
         form_data = {
             "current_city": current_city,
             "fav_cities": [x.strip() for x in fav_cities.split(",") if x],
@@ -245,7 +274,16 @@ if st.session_state.city_suggestions:
 
 # Button outside the form
 if st.button("Submit Cities", disabled=st.session_state.city_suggestions is None):
-    if st.session_state.city_suggestions:
+    jobs_df = utils.jobs_with_titles(st.session_state.jobs_df)
+
+    if not st.session_state.city_suggestions:
+        st.error("Please find cities first before submitting.")
+    elif jobs_df.empty:
+        st.error(
+            "Add at least one job title before submitting: the comparison needs an "
+            "income to weigh city costs against."
+        )
+    else:
         try:
             annotated = utils.resolve_city_rows(st.session_state.city_suggestions)
         except utils.ResolutionThrottled:
@@ -259,9 +297,7 @@ if st.button("Submit Cities", disabled=st.session_state.city_suggestions is None
             st.session_state.resolution = annotated
             # The happy path is unchanged: everything resolved means no panel.
             if all(city["state"] == "resolved" for city in annotated):
-                _save_and_run(utils.picks_from(annotated), annotated)
-    else:
-        st.error("Please find cities first before submitting.")
+                _save_and_run(utils.picks_from(annotated), annotated, jobs_df)
 
 # The panel only appears when something still needs the user's call.
 resolution = st.session_state.get("resolution")

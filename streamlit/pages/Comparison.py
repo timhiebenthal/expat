@@ -3,10 +3,15 @@ import duckdb
 import os
 import altair as alt
 import utils
+import household
 import sys
 import pandas as pd
 
 config = utils.load_config()
+
+# How many Members the comparison is for, set in the entry mask. It only ever
+# decides what the counts open at; the pipeline never sees it.
+members = config["members"]
 
 st.set_page_config(page_title="Cost of Living Analysis", layout="wide")
 st.title("Cost of Living Analysis")
@@ -27,13 +32,50 @@ activity_df = dwh.sql(
 cost_of_living_df = dwh.sql("select * from dwh.analytics.core__cost_of_living").df()
 dwh.close()  # close connection to not block the database
 
+
+def configured_job_pairs(configured_jobs, available):
+    """The jobs the household was configured with, as the sidebar's own strings.
+
+    The pipeline stamps every job as "<title> (<years> years)" and that string is
+    what the sidebar offers, so the config rows are matched against it rather than
+    the title being reassembled a second way. A household can be configured with
+    more jobs than it has earners and the picker allows two, so the list is capped.
+    """
+    wanted = []
+    for job in configured_jobs:
+        title = str(job.get("job_title") or "").strip()
+        if not title:
+            continue
+        try:
+            years = int(job.get("years_experience"))
+        except (TypeError, ValueError):
+            continue
+        wanted.append(f"{title} ({years} years)")
+
+    matched = [title for title in wanted if title in set(available)]
+
+    return (matched or list(available)[:1])[:2]
+
+
+if "counted_for" not in activity_df.columns:
+    # Failing loudly is right, failing inside pandas is not: this warehouse was
+    # built before a Cost item knew whether its count is per Member or shared.
+    st.error(
+        "This warehouse predates the household counts. Run the pipeline once - "
+        "Submit Cities on the home page does it - then reload this page."
+    )
+    st.stop()
+
 city_list = job_earnings_df["city_name"].sort_values().unique().tolist()
 job_list = job_earnings_df["job_title_experience_short"].sort_values().unique().tolist()
 
 with st.sidebar as selection_sidebar:
     currency = st.selectbox("Select currency:", ["EUR"])
     selected_job = st.multiselect(
-        "Enter job title:", job_list, default=job_list[0], max_selections=2
+        "Enter job title:",
+        job_list,
+        default=configured_job_pairs(config["jobs"], job_list),
+        max_selections=2,
     )
     selected_cities = st.multiselect(
         "Select cities:",
@@ -47,21 +89,59 @@ with st.sidebar as selection_sidebar:
 
     st.subheader("Define how many times these activities are done in a month:")
 
+    # A count belongs to the Household, not to one person: it opens at the seed
+    # count for one Member and at twice that for a Per-person Cost item with two.
+    # A count the user has changed is theirs and is never rewritten; one they have
+    # not touched follows the household the moment it changes, which is what keeps
+    # a total from ever sitting at one household size while its labels describe
+    # another. Telling those two apart needs the default each count was last
+    # derived at, not just the value in the box: a box holding 40 could be an edit
+    # or a household that moved.
+    if "count_defaults" not in st.session_state:
+        st.session_state["count_defaults"] = {}
+    derived_defaults = st.session_state["count_defaults"]
+
     selected_activities = []
     for category in activity_df["activity_category"].sort_values().unique():
         with st.expander(category) as exp:
             activity_dict = activity_df.query("activity_category == @category")[
-                ["activity_name", "activity_monthly_default_count"]
+                ["activity_name", "activity_monthly_default_count", "counted_for"]
             ].to_dict(orient="records")
 
             for activity in activity_dict:
-                activity["selected_count"] = st.number_input(
-                    label=activity["activity_name"],
-                    value=activity["activity_monthly_default_count"],
+                name = activity["activity_name"]
+                counted_for = activity["counted_for"]
+                default = household.default_count(
+                    activity["activity_monthly_default_count"], counted_for, members
+                )
+                widget_key = f"count__{name}"
+
+                previous = derived_defaults.get(name)
+                held = (
+                    st.session_state[widget_key]
+                    if widget_key in st.session_state
+                    else None
+                )
+                if held is None or (held == previous and held != default):
+                    # Nothing opened yet, or an untouched count the household has
+                    # moved under.
+                    st.session_state[widget_key] = default
+                derived_defaults[name] = default
+
+                # max_value is generous on purpose: a couple's water opens at 60,
+                # and the old ceiling of 50 would refuse its own default.
+                selected_count = st.number_input(
+                    label=name,
                     step=1,
                     min_value=0,
-                    max_value=50,
+                    max_value=400,
+                    key=widget_key,
                 )
+
+                st.caption(
+                    household.per_member_figure(selected_count, counted_for, members)
+                )
+                activity["selected_count"] = selected_count
                 selected_activities.append(activity)
     # st.json(activity_dict)
 
@@ -79,15 +159,15 @@ with main_tab:
     )
 
     with st.container(border=True) as main_container:
-        variable_cost_df = cost_of_living_df.query(
+        other_cost_df = cost_of_living_df.query(
             "city_name.isin(@selected_cities)"
         ).merge(pd.DataFrame(selected_activities), on="activity_name", how="inner")
-        variable_cost_df["variable_living_cost_eur"] = (
-            variable_cost_df["cost_eur"] * variable_cost_df["selected_count"]
+        other_cost_df["other_monthly_cost_eur"] = (
+            other_cost_df["cost_eur"] * other_cost_df["selected_count"]
         )
 
-        variable_cost_agg = variable_cost_df.groupby("city_name")[
-            ["variable_living_cost_eur"]
+        other_cost_agg = other_cost_df.groupby("city_name")[
+            ["other_monthly_cost_eur"]
         ].sum()
         rent_cost_agg = (
             cost_of_living_df[
@@ -114,12 +194,12 @@ with main_tab:
         )
 
         selected_comparsion_df = (
-            earnings_agg.join(variable_cost_agg)
+            earnings_agg.join(other_cost_agg)
             .join(rent_cost_agg)
             .assign(
                 rent_ratio=lambda x: x["monthly_rent_eur"]
                 / x["total_monthly_net_salary_eur"],
-                total_monthly_cost=lambda x: x["variable_living_cost_eur"]
+                total_monthly_cost=lambda x: x["other_monthly_cost_eur"]
                 + x["monthly_rent_eur"],
                 spend_earnings_ratio=lambda x: x["total_monthly_cost"]
                 / x["total_monthly_net_salary_eur"],
@@ -135,9 +215,9 @@ with main_tab:
             "jobs",
             "total_monthly_net_salary_eur",
             "monthly_rent_eur",
-            "rent_ratio",
-            "variable_living_cost_eur",
+            "other_monthly_cost_eur",
             "total_monthly_cost",
+            "rent_ratio",
             "spend_earnings_ratio",
             "total_absolute_savings",
         ]
@@ -157,14 +237,14 @@ with main_tab:
                 "monthly_rent_eur": st.column_config.NumberColumn(
                     selected_location, format="€ %.0f"
                 ),
-                "rent_ratio": st.column_config.ProgressColumn(
-                    "Rent Ratio", min_value=0, max_value=1, format=" %.02f"
+                "other_monthly_cost_eur": st.column_config.NumberColumn(
+                    "Other monthly cost", format="€ %.0f"
                 ),
                 "total_monthly_cost": st.column_config.NumberColumn(
                     "Total Monthly Cost", format="€ %.0f"
                 ),
-                "variable_living_cost_eur": st.column_config.NumberColumn(
-                    "Additional Cost of Living", format="€ %.0f"
+                "rent_ratio": st.column_config.ProgressColumn(
+                    "Rent Ratio", min_value=0, max_value=1, format=" %.02f"
                 ),
                 "spend_earnings_ratio": st.column_config.ProgressColumn(
                     "Spend/Earnings Ratio", min_value=0, max_value=1, format=" %.02f"

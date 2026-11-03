@@ -8,6 +8,8 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
+import household
+
 # Docker and Cloud Run inject DUCKDB_LOCATION as a real environment variable. On
 # the host there is no shell export, so read it from .env. load_dotenv leaves an
 # already-set variable alone, so the container's value always wins.
@@ -63,6 +65,23 @@ def create_altair_labelled_vertical_bar_chart(df, x_field, x_label, y_field, y_l
     )
 
 
+def _read_settings(dwh):
+    """The app-owned scalars the entry mask wrote.
+
+    raw_config.settings only exists once the mask has written one, so a warehouse
+    from before that - or one the app has never written to - is normal rather than
+    broken, and reads as no settings at all.
+    """
+    import duckdb
+
+    try:
+        rows = dwh.sql("select key, value from raw_config.settings").df()
+    except duckdb.CatalogException:
+        return {}
+
+    return dict(zip(rows["key"], rows["value"]))
+
+
 def load_config():
     """
     Loads configuration from DuckDB
@@ -79,12 +98,14 @@ def load_config():
     try:
         cities = dwh.table("raw_config.cities").df()["name"].tolist()
         jobs = dwh.table("raw_config.jobs").df().to_dict(orient="records")
+        settings = _read_settings(dwh)
     finally:
         dwh.close()
 
     return {
         "cities": cities,
         "jobs": jobs,
+        "members": household.members_from_settings(settings),
     }
 
 
@@ -103,7 +124,66 @@ def save_config(city_data, jobs_data):
         yaml.dump(config, file, sort_keys=False)
 
 
-def save_config_to_duckdb(city_df, jobs_df):
+def jobs_editor_default(members):
+    """The job rows the entry mask opens on.
+
+    One row, and a second for a couple, since they usually have two earners. That
+    row is an affordance rather than a rule: the Member count is chosen above the
+    editor, so a partner who is not working is a Couple with one filled row and the
+    blank one dropped.
+    """
+    import pandas as pd
+
+    frame = pd.DataFrame({"Job Title": ["Data Engineer"], "Years of Experience": [7]})
+    if members == 2:
+        frame.loc[len(frame)] = ["", None]
+
+    return frame
+
+
+def jobs_with_titles(jobs_df):
+    """The editor's rows that name a job, in the editor's own column names.
+
+    A Couple can be entered with one row - a partner who has not found work yet
+    still pays half the rent - and the editor allows blank rows. The earnings
+    retrieval loops over whatever is written here, so blank rows are dropped at
+    the door instead of being handed to the model as a job title.
+    """
+    titles = jobs_df["Job Title"].astype("string").str.strip()
+    jobs_df = jobs_df.assign(**{"Job Title": titles})
+
+    return jobs_df[titles.notna() & (titles != "")].reset_index(drop=True)
+
+
+def load_members():
+    """The Member count last entered, for the entry mask to open on.
+
+    Tolerant on purpose: the Home page renders before the pipeline has ever run, so
+    there may be no warehouse, no config schema and no settings table yet. All
+    three mean one Member, which is the behaviour that existed before a household
+    could be chosen at all.
+    """
+    import duckdb
+
+    try:
+        dwh = duckdb.connect(DATABASE_LOCATION, read_only=True)
+    except duckdb.Error:
+        return 1
+
+    try:
+        return household.members_from_settings(_read_settings(dwh))
+    finally:
+        dwh.close()
+
+
+def save_config_to_duckdb(city_df, jobs_df, members):
+    """Write the app-owned config that the pipeline and the pages read.
+
+    raw_config is the one schema Streamlit owns. cities and jobs are the pipeline's
+    inputs; settings holds the scalars the pages render from, which today is the
+    Member count - the mask writes it, the comparison reads it, and nothing in the
+    pipeline consumes it.
+    """
     import os
     import logging
     import duckdb
@@ -115,13 +195,17 @@ def save_config_to_duckdb(city_df, jobs_df):
             "Years of Experience": "years_experience",
         }
     )
+    settings_df = pd.DataFrame({"key": ["members"], "value": [str(members)]})
     # upload tables to DuckDB
     dwh = duckdb.connect(DATABASE_LOCATION)
     try:
         dwh.sql("CREATE SCHEMA IF NOT EXISTS raw_config")
         dwh.sql("CREATE OR REPLACE TABLE raw_config.cities AS SELECT * FROM city_df")
         dwh.sql("CREATE OR REPLACE TABLE raw_config.jobs AS SELECT * FROM jobs_df")
-        logging.info("Tables for jobs and cities uploaded to DuckDB\n")
+        dwh.sql(
+            "CREATE OR REPLACE TABLE raw_config.settings AS SELECT * FROM settings_df"
+        )
+        logging.info("Tables for jobs, cities and settings uploaded to DuckDB\n")
     finally:
         # Released here on purpose: run_pipeline() shells out to Bruin straight
         # after this, and that subprocess needs the write lock.
@@ -225,6 +309,29 @@ def apply_resolution(cities, picks):
             }
         )
     return final
+
+
+def is_settled(annotated, choices=None):
+    """True when every row would reach the write with a slug.
+
+    The Confirm gate asks this on every rerun, so it is free of network calls:
+    a resolved row needs no choice, an ambiguous row needs a chosen ``city_id``,
+    and an unresolved row needs a pasted slug or to be removed. Whether the
+    chosen id maps to a slug is only known when ``picks_from`` fetches it.
+    """
+    choices = choices or {}
+    for city in annotated:
+        choice = choices.get(city["name"], {})
+        if choice.get("drop"):
+            continue
+        if city["state"] == "resolved":
+            continue
+        if city["state"] == "ambiguous" and choice.get("city_id"):
+            continue
+        if city["state"] == "unresolved" and (choice.get("manual") or "").strip():
+            continue
+        return False
+    return True
 
 
 def picks_from(annotated, choices=None, fetch=None):
