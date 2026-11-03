@@ -167,11 +167,14 @@ def test_gate_opens_once_an_ambiguous_city_is_picked(gate):
 
     _submit(at)
 
-    # The first match is the radio's default, so the row is already decided.
-    # Before the fix, Confirm stayed disabled anyway because the gate read the
-    # resolution state instead of the picks.
+    # Nothing is preselected: the pick is the decision, and the gate stays shut
+    # until it is made.
     radio = next(r for r in at.radio if r.key == "amb-London")
-    assert radio.value == "London, United Kingdom"
+    assert radio.value is None
+    confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
+    assert confirm.disabled is True
+
+    radio.set_value("London, United Kingdom").run()
 
     confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
     assert confirm.disabled is False

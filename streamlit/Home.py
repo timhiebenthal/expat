@@ -134,13 +134,20 @@ def _render_resolution_panel(annotated):
         for city in ambiguous:
             labels = [m["label"] for m in city["matches"]]
             picked = st.radio(
-                f"Which **{city['name']}**?", labels, index=0, key=f"amb-{city['name']}"
+                f"Which **{city['name']}**?",
+                labels,
+                index=None,
+                key=f"amb-{city['name']}",
             )
-            choices[city["name"]] = {
-                "city_id": next(
-                    m["value"] for m in city["matches"] if m["label"] == picked
-                )
-            }
+            choices[city["name"]] = (
+                {
+                    "city_id": next(
+                        m["value"] for m in city["matches"] if m["label"] == picked
+                    )
+                }
+                if picked is not None
+                else {}
+            )
 
     if unresolved:
         st.warning(
