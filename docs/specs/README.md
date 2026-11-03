@@ -12,3 +12,19 @@ to Bruin checks, and the app running `bruin run pipeline --workers 1`. The cutov
 shipped as #19: `loading/` and `dbt/` deleted, the dependencies removed, the pinned
 CLI installed in the image, and the dlt-era `raw_*` tables dropped. Spec:
 `docs/specs/2026-10-14-bruin-migration/`.
+
+## 2026-10-16 - Human-in-the-loop city resolution for Numbeo
+
+Outcome: `feature/numbeo-hitl` (`c902992..1139109`, PR #26) - app cities are
+resolved to Numbeo's canonical slugs through Numbeo's own search at Submit, with
+an on-page panel for ambiguous and unmatched names, and the slug stored on
+`raw_config.cities` so the cost-of-living ingest stops failing on names Numbeo
+spells differently. Spec: `docs/specs/2026-10-16-numbeo-hitl/`.
+
+## 2026-10-16 - Persist scraped numbeo records
+
+Outcome: `feature/numbeo-cache` (`df775c3..92674a1`, PR #27, stacked on #26) -
+`raw_numbeo.cost_of_living` keeps a `scraped_at` and the ingest reuses a city
+until its rows are 180 days old, so a re-run with unchanged cities costs no
+numbeo requests against the monthly quota. Spec:
+`docs/specs/2026-10-16-numbeo-cache/`.
