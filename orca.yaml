@@ -1,0 +1,12 @@
+# orca.yaml - read by the Orca ADE when it creates a git worktree.
+# Docs: https://www.onorca.dev/docs/model/orca-yaml
+#
+# Docker is deploy-only here (local_build / local_deploy), so `uv sync` is the
+# whole setup step and `make test` runs pytest against .venv directly.
+#
+# No `worktree.sharedDirectories`: .venv holds an editable install whose finder
+# points at the primary checkout, so a linked venv would make worktree tests
+# import main's source.
+setupAgentStartupPolicy: wait-for-setup
+scripts:
+  setup: uv sync

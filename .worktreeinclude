@@ -1,0 +1,14 @@
+# .worktreeinclude - gitignored paths Orca copies into each new local worktree.
+# Docs: https://www.onorca.dev/docs/model/orca-yaml
+#
+# One literal path per line. No globs, no negation. Entries must exist and be
+# gitignored in the primary checkout; missing entries are skipped silently.
+# Copies are private per worktree - changing a value in the primary checkout
+# does not propagate to existing worktrees.
+#
+# .bruin.yml is committed, so it arrives with checkout and is not listed here.
+# database/dwh.duckdb is 8 MB and gitignored: copying it beats rebuilding the
+# warehouse by hand in every worktree.
+
+.env
+database/dwh.duckdb
