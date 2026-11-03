@@ -299,6 +299,7 @@ def test_the_slug_the_app_writes_is_the_one_the_ingest_reads(tmp_path, utils, mo
         jobs_df=pd.DataFrame(
             {"job_title": ["Data Engineer"], "years_experience": [7]}
         ),
+        members=1,
     )
 
     monkeypatch.setenv("DUCKDB_LOCATION", str(db))

@@ -113,7 +113,7 @@ def build_warehouse():
     con.execute(
         "create table analytics.seed_activity_mapping as "
         "select category, activity, activity_type, "
-        "cast(activity_count as integer) as activity_count "
+        "cast(activity_count as integer) as activity_count, counted_for "
         f"from read_csv('{seed}', header = true)"
     )
     return con
