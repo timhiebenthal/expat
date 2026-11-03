@@ -5,6 +5,7 @@ caller can inject its own fetcher. Called by `pipeline/assets/ingest/numbeo.py`.
 """
 
 import logging
+from datetime import datetime, timedelta
 from typing import NamedTuple
 from urllib.parse import quote_plus
 
@@ -21,6 +22,11 @@ CITY_SEARCH_URL = "https://www.numbeo.com/common/CitySearchJson"
 DISPATCHER_URL = "https://www.numbeo.com/common/dispatcher.jsp"
 NUMBEO_HOST = "https://www.numbeo.com"
 CITY_URL_BASE = "https://www.numbeo.com/cost-of-living/in"
+
+# numbeo enforces a monthly page-view quota and blocks the IP once it is gone, so
+# a stored city is reused until it is this old rather than re-fetched every run.
+# Prices do not move fast enough to justify the quota cost.
+SCRAPE_TTL_DAYS = 180
 
 
 class NumbeoThrottled(RuntimeError):
@@ -153,6 +159,39 @@ def resolve_city(name, country=None, fetch=None):
             return Resolution("resolved", narrowed)
 
     return Resolution("ambiguous", matches)
+
+
+def _scraped_at(value):
+    """A stored ``scraped_at`` as a datetime; ISO strings are accepted too."""
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def plan_scrapes(configured, stored, now, ttl_days=SCRAPE_TTL_DAYS):
+    """The ``(name, slug)`` pairs that need a fetch, in ``configured`` order.
+
+    ``stored`` is the existing ``raw_numbeo.cost_of_living`` rows. A city is
+    reused while its newest ``scraped_at`` is within the TTL; one with no rows at
+    all, or rows older than that, is fetched. A table written before the column
+    existed has no timestamps, so everything is fetched once.
+    """
+    newest = {}
+    for row in stored:
+        city = row.get("city")
+        when = _scraped_at(row.get("scraped_at"))
+        if city and when and (city not in newest or when > newest[city]):
+            newest[city] = when
+
+    cutoff = now - timedelta(days=ttl_days)
+    return [
+        (name, slug)
+        for name, slug in configured
+        if newest.get(name) is None or newest[name] < cutoff
+    ]
 
 
 def get_city_data(city, slug=None, fetch=None):
