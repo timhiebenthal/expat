@@ -15,7 +15,7 @@ RUN apt-get install -y build-essential
 
 # Install dependencies with uv, locked. Copied on their own so the (slow)
 # dependency layer is cached independently of the application source.
-COPY --from=ghcr.io/astral-sh/uv:0.10.8 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.5 /uv /uvx /bin/
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
