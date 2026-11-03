@@ -134,6 +134,17 @@ def picker(page, label):
     return next(element for element in page.multiselect if element.label == label)
 
 
+def drop_settings(warehouse):
+    """A warehouse from before the entry mask wrote a Member count."""
+    import duckdb
+
+    dwh = duckdb.connect(str(warehouse))
+    try:
+        dwh.sql("drop table if exists raw_config.settings")
+    finally:
+        dwh.close()
+
+
 def drop_basis_column(warehouse):
     """A warehouse from before the household counts existed."""
     import duckdb
@@ -251,9 +262,15 @@ def test_page_offers_every_city_that_has_earnings(comparison_page):
     assert expected == offered
 
 
-def test_counts_open_at_one_member_without_settings(comparison_page):
+def test_counts_open_at_one_member_without_settings(warehouse_copy, render_page):
     """A warehouse from before the entry mask had a household: today's numbers."""
-    values = counts(comparison_page)
+    # The copy comes from the app's warehouse, which now usually *has* a settings
+    # table because submitting writes one. The test is about the absence, so the
+    # absence is created here rather than assumed of the developer's database.
+    drop_settings(warehouse_copy)
+    page = render_page(warehouse_copy)
+
+    values = counts(page)
 
     assert values["Groceries - 1.5l Water"] == 30
     assert values["Restaurant - Cappuccino"] == 4
