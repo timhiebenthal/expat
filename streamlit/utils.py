@@ -128,6 +128,164 @@ def save_config_to_duckdb(city_df, jobs_df):
         dwh.close()
 
 
+class ResolutionThrottled(RuntimeError):
+    """numbeo is rate-limiting; the app reports it instead of a stack trace."""
+
+
+def _resolve(name, country, fetch):
+    from pipeline.lib.numbeo import NumbeoThrottled, resolve_city
+
+    try:
+        return resolve_city(name, country=country, fetch=fetch)
+    except NumbeoThrottled as exc:
+        raise ResolutionThrottled(str(exc)) from exc
+
+
+def _slug_for(city_id, fetch):
+    from pipeline.lib.numbeo import NumbeoThrottled, canonical_slug
+
+    try:
+        return canonical_slug(city_id, fetch=fetch)
+    except NumbeoThrottled as exc:
+        raise ResolutionThrottled(str(exc)) from exc
+
+
+def load_city_slugs(database_location=None):
+    """name -> ``{"slug", "city_id"}`` for every resolved city in raw_config.
+
+    Tolerant of a table written before resolution existed: without the slug
+    columns there is nothing to inherit, so the mapping comes back empty.
+    """
+    import duckdb
+
+    location = database_location or DATABASE_LOCATION
+    dwh = duckdb.connect(location)
+    try:
+        columns = {
+            row[0]
+            for row in dwh.execute(
+                "select column_name from information_schema.columns "
+                "where table_schema = 'raw_config' and table_name = 'cities'"
+            ).fetchall()
+        }
+        slug = "numbeo_slug" if "numbeo_slug" in columns else "null"
+        city_id = "numbeo_city_id" if "numbeo_city_id" in columns else "null"
+        rows = dwh.execute(
+            f"select name, {slug}, {city_id} from raw_config.cities"
+        ).fetchall()
+    finally:
+        dwh.close()
+
+    return {
+        name: {"slug": slug, "city_id": city_id}
+        for name, slug, city_id in rows
+        if slug
+    }
+
+
+def resolve_city_rows(cities, fetch=None):
+    """Annotate each city row with its numbeo resolution.
+
+    Adds ``state`` ("resolved" / "ambiguous" / "unresolved") and ``matches``,
+    skipping blank names. The decision itself lives in ``pipeline.lib.numbeo``;
+    this only adapts rows to it, so it stays testable without the UI.
+    """
+    from pipeline.lib.numbeo import resolve_city
+
+    annotated = []
+    for city in cities:
+        name = (city.get("name") or "").strip()
+        if not name:
+            continue
+        country = (city.get("country") or "").strip()
+        outcome = _resolve(name, country or None, fetch)
+        annotated.append({**city, "state": outcome.state, "matches": outcome.matches})
+    return annotated
+
+
+def apply_resolution(cities, picks):
+    """Merge the user's decisions into the rows written to raw_config.cities.
+
+    ``cities`` are rows annotated by ``resolve_city_rows``; ``picks`` maps a city
+    name to ``{"slug", "city_id", "drop"}``. A row marked drop, or one that never
+    got a slug, is left out - an unresolved city must never be written.
+    """
+    final = []
+    for city in cities:
+        pick = picks.get(city["name"], {})
+        if pick.get("drop") or not pick.get("slug"):
+            continue
+        final.append(
+            {
+                "name": city["name"],
+                "country": city.get("country"),
+                "description": city.get("description"),
+                "numbeo_slug": pick["slug"],
+                "numbeo_city_id": pick.get("city_id"),
+            }
+        )
+    return final
+
+
+def picks_from(annotated, choices=None, fetch=None):
+    """Turn annotated rows plus the user's choices into ``{name: pick}``.
+
+    A pick is ``{"slug", "city_id"}`` or ``{"drop": True}``. A resolved row needs
+    no choice; an ambiguous row uses ``choices[name]["city_id"]``; an unresolved
+    row uses ``choices[name]["manual"]`` as a slug, or is dropped. The slug is
+    read from numbeo only for a chosen id, never for the whole candidate list.
+    """
+    choices = choices or {}
+    picks = {}
+    for city in annotated:
+        name = city["name"]
+        choice = choices.get(name, {})
+        if choice.get("drop"):
+            picks[name] = {"drop": True}
+        elif city["state"] == "resolved":
+            city_id = city["matches"][0]["value"]
+            picks[name] = {
+                "slug": _slug_for(city_id, fetch),
+                "city_id": city_id,
+            }
+        elif city["state"] == "ambiguous" and choice.get("city_id"):
+            city_id = choice["city_id"]
+            picks[name] = {
+                "slug": _slug_for(city_id, fetch),
+                "city_id": city_id,
+            }
+        elif city["state"] == "unresolved":
+            manual = (choice.get("manual") or "").strip()
+            picks[name] = {"slug": manual or None, "city_id": None}
+        else:
+            picks[name] = {}
+    return picks
+
+
+def rename_rows(annotated, renames, fetch=None):
+    """Re-resolve rows the user renamed, returning the updated annotation.
+
+    A rename is a new name to match, not a label change: the row is resolved
+    again so the panel can tell whether it is still blocked.
+    """
+    updated = []
+    for city in annotated:
+        new_name = renames.get(city["name"])
+        if not new_name:
+            updated.append(city)
+            continue
+        outcome = _resolve(new_name, city.get("country") or None, fetch)
+        updated.append(
+            {
+                **city,
+                "name": new_name,
+                "state": outcome.state,
+                "matches": outcome.matches,
+            }
+        )
+    return updated
+
+
 def editable_df_component(dict, object_name, expander=False):
     import pandas as pd
 
