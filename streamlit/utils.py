@@ -311,6 +311,29 @@ def apply_resolution(cities, picks):
     return final
 
 
+def is_settled(annotated, choices=None):
+    """True when every row would reach the write with a slug.
+
+    The Confirm gate asks this on every rerun, so it is free of network calls:
+    a resolved row needs no choice, an ambiguous row needs a chosen ``city_id``,
+    and an unresolved row needs a pasted slug or to be removed. Whether the
+    chosen id maps to a slug is only known when ``picks_from`` fetches it.
+    """
+    choices = choices or {}
+    for city in annotated:
+        choice = choices.get(city["name"], {})
+        if choice.get("drop"):
+            continue
+        if city["state"] == "resolved":
+            continue
+        if city["state"] == "ambiguous" and choice.get("city_id"):
+            continue
+        if city["state"] == "unresolved" and (choice.get("manual") or "").strip():
+            continue
+        return False
+    return True
+
+
 def picks_from(annotated, choices=None, fetch=None):
     """Turn annotated rows plus the user's choices into ``{name: pick}``.
 

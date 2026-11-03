@@ -147,6 +147,66 @@ def test_gate_blocks_the_write_and_shows_the_panel(gate):
     assert any("no match" in w.value for w in at.warning)
 
 
+def test_gate_opens_once_an_ambiguous_city_is_picked(gate):
+    """A choice on the ambiguous row is what unblocks Confirm - not a re-resolve."""
+    build, calls = gate
+    at = build(
+        [
+            {
+                "name": "London",
+                "country": "United Kingdom",
+                "description": "favourite",
+                "state": "ambiguous",
+                "matches": [
+                    {"label": "London, United Kingdom", "value": "2"},
+                    {"label": "Londonderry (Derry), United Kingdom", "value": "3"},
+                ],
+            }
+        ]
+    )
+
+    _submit(at)
+
+    # The first match is the radio's default, so the row is already decided.
+    # Before the fix, Confirm stayed disabled anyway because the gate read the
+    # resolution state instead of the picks.
+    radio = next(r for r in at.radio if r.key == "amb-London")
+    assert radio.value == "London, United Kingdom"
+
+    confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
+    assert confirm.disabled is False
+    confirm.click().run()
+    assert "saved" in calls
+
+
+def test_gate_opens_once_an_unmatched_city_is_dropped(gate):
+    """Removing the row is a decision, so it settles the city like a pick does."""
+    build, calls = gate
+    at = build(
+        [
+            {
+                "name": "Nowhereville",
+                "country": "",
+                "description": "made up",
+                "state": "unresolved",
+                "matches": [],
+            }
+        ]
+    )
+
+    _submit(at)
+
+    confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
+    assert confirm.disabled is True
+
+    next(c for c in at.checkbox if c.key == "drop-Nowhereville").check().run()
+
+    confirm = next(b for b in at.button if b.label == "Confirm and run pipeline")
+    assert confirm.disabled is False
+    confirm.click().run()
+    assert "saved" in calls
+
+
 def test_gate_reports_a_throttle_and_writes_nothing(gate):
     build, calls = gate
     at = build([], throttle=True)

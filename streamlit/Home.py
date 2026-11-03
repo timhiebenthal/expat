@@ -181,7 +181,7 @@ def _render_resolution_panel(annotated):
         else:
             st.rerun()
 
-    blocked = bool(ambiguous or unresolved)
+    blocked = not utils.is_settled(annotated, choices)
     if st.button("Confirm and run pipeline", disabled=blocked, key="confirm"):
         try:
             picks = utils.picks_from(annotated, choices)
@@ -191,7 +191,11 @@ def _render_resolution_panel(annotated):
                 "was saved - retry in a few minutes."
             )
         else:
-            _save_and_run(picks, annotated)
+            _save_and_run(
+                picks,
+                annotated,
+                utils.jobs_with_titles(st.session_state.jobs_df),
+            )
     if blocked:
         st.caption(
             "Confirm is disabled until every city is resolved. Nothing is written."

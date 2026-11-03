@@ -304,3 +304,38 @@ def test_the_slug_the_app_writes_is_the_one_the_ingest_reads(tmp_path, utils, mo
 
     monkeypatch.setenv("DUCKDB_LOCATION", str(db))
     assert ingest.configured_cities() == [("Tel Aviv", "Tel-Aviv-Yafo")]
+
+
+def test_is_settled_ignores_choices_for_rows_that_need_none(utils):
+    annotated = [
+        {
+            "name": "Munich",
+            "state": "resolved",
+            "matches": [{"label": "Munich, Germany", "value": "1"}],
+        },
+        {
+            "name": "London",
+            "state": "ambiguous",
+            "matches": [
+                {"label": "London, United Kingdom", "value": "2"},
+                {"label": "Londonderry (Derry), United Kingdom", "value": "3"},
+            ],
+        },
+        {"name": "Nowhere", "state": "unresolved", "matches": []},
+    ]
+
+    assert utils.is_settled(annotated, {}) is False
+    assert utils.is_settled(annotated, {"London": {"city_id": "2"}}) is False
+    assert (
+        utils.is_settled(
+            annotated, {"London": {"city_id": "2"}, "Nowhere": {"drop": True}}
+        )
+        is True
+    )
+    assert (
+        utils.is_settled(
+            annotated,
+            {"London": {"city_id": "2"}, "Nowhere": {"manual": "Nowhere-City"}},
+        )
+        is True
+    )
